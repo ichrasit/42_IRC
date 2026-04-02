@@ -68,3 +68,54 @@ void    Server::closerFds(){
     }
     _fds.clear();
 }
+
+void    Server::clientRemover(int fd){
+    // FD'yi işletim sisteminde kapatmak (bağlantıyı tamamen kes)
+    close(fd);
+
+    // poll listesinden (vektörden temizlemek)
+    for(size_t i = 0; i < _fds.size(); i++){
+        if(_fds[i].fd == fd){
+            _fds.erase(_fds.begin() + i);
+            break;
+        }
+    }
+    // kullanıcının bufferını temizleme
+    _clientBuffers.erase(fd);
+    std::cout << "FD " << fd << " left on the server and removed." << std::endl;
+}
+
+
+void    Server::handleClientData(int fd){
+    char buffer[1024];
+    std::memset(buffer, 0, sizeof(buffer));
+
+    // veriyi okuma işlemi
+    ssize_t bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
+
+    // hata veya kopma kontrolü
+
+    if(bytes <= 0){
+        if(bytes == 0)
+            std::cout << "User shut the connection (FD: " << fd << ")" << std::endl;
+        else
+            std::cerr << "Error: Reading (FD: " << fd << ")" << std::endl;
+        clientRemover(fd);
+        return;
+    }
+
+    // veri başarıyla geldiyse map içindeki stringe ekleme
+    _clientBuffers[fd] += buffer;
+
+    // IRC satır sonu (\r\n) Kontrolü
+    size_t pos;
+    while((pos = _clientBuffers[fd].find("\r\n")) != std::string::npos){
+        // komutu bastan basladıgı yere kadar al
+        std::string command = _clientBuffers[fd].substr(0, pos);
+        _clientBuffers[fd].erase(0, pos + 2);
+
+        // test mesajı (silinebilir)
+        std::cout << "Command [FD " << fd << "]: " << command << std::endl;
+    }
+
+}

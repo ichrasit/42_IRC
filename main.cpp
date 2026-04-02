@@ -1,4 +1,7 @@
 #include "server/server.hpp"
+#include <iostream>
+#include <cstdlib>
+#include <csignal>
 
 bool Server::_signal = false;
 
@@ -20,6 +23,8 @@ int main(int ac, char **av)
         std::cerr << "Error : The port has to 1024 between 65535!" << std::endl;
         return 1;
     }
+    
+    // Sinyalleri yakalama atamalari
     signal(SIGINT, signalHandler);
     signal(SIGQUIT, signalHandler);
 
@@ -27,16 +32,20 @@ int main(int ac, char **av)
         Server ircServer(port, av[2]);
         std::cout << "----- IRC SERVER IS STARTING  ------" << std::endl;
 
-        // soket kurulumu
-
+        // 1. Soket kurulumu, bind ve listen
         ircServer.serverInitializer();
 
+        std::cout << "[INFO] Server is successfully initialized." << std::endl;
+        std::cout << "[INFO] Waiting for connections and messages... (Press CTRL+C to stop)" << std::endl;
+
+        // 2. Ana sonsuz dongu (Yeni baglantilari ve gelen mesajlari burada dinliyoruz)
         ircServer.runner();
+
     }  catch(const std::exception &e){
             std::cerr << "CRITICAL ERROR! : " << e.what() << std::endl;
             return 1;
     }
-    std::cout << "SERVER IS CLOSED. SEE YOU LATER!" << std::endl;
-
     
+    std::cout << "SERVER IS CLOSED. SEE YOU LATER!" << std::endl;
+    return 0; // Programin basariyla bittigini isletim sistemine bildir
 }

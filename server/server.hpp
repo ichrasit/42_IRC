@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <csignal> // ubuntu sinyal için
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h> // socket, bind ve listen için gerekli olan kütüphanemiz
@@ -23,6 +24,7 @@ class Server{
         std::string _password;
         int _serverFd;
         bool    _is_running;
+        std::map<int, std::string> _clientBuffers; // FD ve o FD'ye ait yarım mesajları tutan buffer
         
         // Ağ yönetimi için gerekli olan konteynerlar
         std::vector<struct pollfd> _fds;
@@ -38,8 +40,8 @@ class Server{
         void closerFds();
 
         void acceptNewClient();
-        void handleClientData();
+        void handleClientData(int fd);
 
-        void clientRemover();
-};  
+        void clientRemover(int fd);
+}; 
 #endif
