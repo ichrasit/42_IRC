@@ -5,49 +5,53 @@
 #include <vector>
 #include <map>
 #include <string>
-#include <csignal> // ubuntu sinyal için
+#include <csignal> // Sinyal yönetimi için (SIGINT vb.)
 #include <cstring>
 #include <unistd.h>
-#include <sys/socket.h> // socket, bind ve listen için gerekli olan kütüphanemiz
-#include <netinet/in.h> // sockaddr_in yapısı için gerekli olan kütüphanemiz
-#include <fcntl.h>
-#include <poll.h> // pollfd yapısı ve poll() fonskiyonumuz için
-#include <arpa/inet.h> // inet_itoa iiçin
-#include "client.hpp"
+#include <sys/socket.h> // socket, bind ve listen fonksiyonları için
+#include <netinet/in.h> // sockaddr_in yapısı için
+#include <fcntl.h>      // fcntl (non-blocking) için
+#include <poll.h>       // pollfd yapısı ve poll() fonksiyonu için
+#include <arpa/inet.h>  // inet_ntoa gibi dönüşümler için
+#include "client.hpp"   // Client sınıfı tanımı için
 
-// client sınıfı ilerde tanımlanacak
-class Client;
-
-class Server{
+class Server {
     private:
-        int _port;
+        int         _port;
         std::string _password;
-        int _serverFd;
-        bool    _is_running;
-        std::map<int, std::string> _clientBuffers; // FD ve o FD'ye ait yarım mesajları tutan buffer
+        int         _serverFd;
+        bool        _is_running;
         
-        // Ağ yönetimi için gerekli olan konteynerlar
-        std::vector<struct pollfd> _fds;
-        std::map<int, Client*>  _clients;
+        // Ağ yönetimi ve istemci takibi için konteynerlar
+        std::vector<struct pollfd> _fds;      // poll() fonksiyonunun izleyeceği soket listesi
+        std::map<int, Client*>     _clients;  // FD'ye karşılık gelen Client nesneleri
+        typedef void (Server::*CommandHandler)(int, std::vector<std::string>);
         
+        std::map<std::string, CommandHandler> _commands;
+
     public:
-        static bool _signal;
+        static bool _signal; // Sunucuyu kapatmak için statik sinyal değişkeni
+        
         Server(int port, std::string password);
         ~Server();
 
+        // Sunucu temel işlemleri
         void serverInitializer();
         void runner();
         void closerFds();
 
+        // Bağlantı ve Veri yönetimi
         void acceptNewClient();
         void handleClientData(int fd);
-
-<<<<<<< HEAD
         void clientRemover(int fd);
-}; 
-=======
-        void clientRemover();
 
-};  
->>>>>>> 0436569 (ports are listening, adding a bit parse and prepareing client class for server site)
+        void sendMessage(int fd, std::string message);
+        // IRC Protokol işlemleri (Parser ve Komutlar)
+        void parseCommand(int fd, std::string command);
+        void cmdNick(int fd, std::vector<std::string> args);
+        void cmdUser(int fd, std::vector<std::string> args);
+        void initCommands();
+}; 
+
+
 #endif

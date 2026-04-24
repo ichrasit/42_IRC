@@ -27,6 +27,9 @@ int main(int ac, char **av)
     // Sinyalleri yakalama atamalari
     signal(SIGINT, signalHandler);
     signal(SIGQUIT, signalHandler);
+    
+    // HAYAT KURTARAN SATIR: Biri aniden çıkarsa sunucunun çökmesini engeller (Hem Mac Hem Ubuntu için)
+    signal(SIGPIPE, SIG_IGN); 
 
     try{
         Server ircServer(port, av[2]);
@@ -47,5 +50,5 @@ int main(int ac, char **av)
     }
     
     std::cout << "SERVER IS CLOSED. SEE YOU LATER!" << std::endl;
-    return 0; // Programin basariyla bittigini isletim sistemine bildir
+    return 0; 
 }

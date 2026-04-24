@@ -2,8 +2,6 @@
 #define CLIENT_HPP
 
 #include <string>
-#include "server.hpp"
-
 
 class Client{
     private:
@@ -16,12 +14,10 @@ class Client{
         int getFd() const {return _fd; }
 
         // buffer işlemleri
-
         void appendBuffer(std::string str) {_buffer += str;}
-        std::string getBuffer() const {return _buffer;}
+        std::string& getBuffer() { return _buffer; }       
         void clearBuffer() {_buffer.clear(); }
         void eraseBuffer(size_t pos) {_buffer.erase(0, pos);}
 };
-
 
 #endif
