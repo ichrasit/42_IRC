@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <poll.h> // pollfd yapısı ve poll() fonskiyonumuz için
 #include <arpa/inet.h> // inet_itoa iiçin
-
+#include "client.hpp"
 
 // client sınıfı ilerde tanımlanacak
 class Client;
@@ -42,6 +42,12 @@ class Server{
         void acceptNewClient();
         void handleClientData(int fd);
 
+<<<<<<< HEAD
         void clientRemover(int fd);
 }; 
+=======
+        void clientRemover();
+
+};  
+>>>>>>> 0436569 (ports are listening, adding a bit parse and prepareing client class for server site)
 #endif
