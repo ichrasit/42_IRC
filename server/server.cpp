@@ -71,6 +71,10 @@ void    Server::closerFds(){
         std::cout << "FD " << _fds[i].fd << " is closing." << std::endl;
         close(_fds[i].fd);
     }
+    for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
+        delete it->second; // içerideki new Client nesnelerini silip definitely lost'u engeller!
+    }
+    _clients.clear();
     _fds.clear();
 }
 
