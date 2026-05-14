@@ -18,11 +18,14 @@ int main(int ac, char **av)
         return 1;
     }
 
-    int port = std::atoi(av[1]);
-    if(port < 1024 || port > 65535){
-        std::cerr << "Error : The port has to 1024 between 65535!" << std::endl;
-        return 1;
+    std::string portStr = av[1];
+    for(size_t i = 0; i < portStr.length(); i++){
+        if(!std::isdigit(portStr[i])){
+            std::cerr << "Error: Port must contain only numbers!" << std::endl;
+            return 1;
+        }
     }
+    int port = std::atoi(av[1]);
     
     // Sinyalleri yakalama atamalari
     signal(SIGINT, signalHandler);

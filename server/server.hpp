@@ -14,6 +14,7 @@
 #include <poll.h>       // pollfd yapısı ve poll() fonksiyonu için
 #include <arpa/inet.h>  // inet_ntoa gibi dönüşümler için
 #include "client.hpp"   // Client sınıfı tanımı için
+#include <cctype>
 
 class Server {
     private:
