@@ -146,8 +146,8 @@ void Server::handleClientData(int fd){
         return;
     }
 
-    //gelen veriyi o client'in kişisel bufferına eklememiz gerekiyor
-    _clients[fd]->appendBuffer(buffer);
+    //gelen veriyi o client'in kişisel bufferına eklememiz gerekiyor: null karakterleri artık mesajı bölmüyor recv ne kadar okuduysa yazdırıyor!
+    _clients[fd]->appendBuffer(std::string(buffer, bytes_received));
 
     // EVRENSEL BUFFER KONTROLÜ (Mac ve Ubuntu Uyumu)
     std::string &client_buffer = _clients[fd]->getBuffer();
