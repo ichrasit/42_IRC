@@ -1,0 +1,62 @@
+fonksiyonlarin amaclari:
+
+handleClientData: istemcilerden gelen anlik verileri karsilar. 
+Ag uzerinden gelen mesajlari bufferda birlestirir. Eksiksiz new line gelene kadar
+parsera gonderir sonra bufferi temizler
+
+
+parse ve init commands:
+
+istemciden gelen metini komut ve argumanlar olacak sekilde kelimelere boler. Ardindan
+commands isimli fonksiyon pointerini kullanarak ilgili fonksiyona gonderir.
+
+
+cmdnick ve user:
+
+kullanıcının nickname ve kimlik bilgilerini ayarlar isregistered nesnesini işaretler
+ve ağa girdi mesajını tetikler
+
+
+clientremover ve closerFds:
+
+new client ile oluşturulmuş clientleri ve varolan fdleri güvenli bir şekilde siler
+memory leak kalmaz
+
+
+Hazır sistem fonksiyonları amacı:
+
+socket: işletim sisteminden ağ iletişimi için yeni bir fd ister. IPv4 AF_INET ve TCP
+SOCK_STREAM formatında tcp soketi oluşturur.
+
+setsockopt: soketi manipüle eder. Özellikle kullanılan SO_REUSEADDR flagi sunucu aniden
+kapandığında sunucu arka planda mesgul olarak beklemez boylece hata alması halınde tekrar
+anında başlar
+
+
+fcntl: Dosya ve soket kontrol mekanizması. F_SETFL komutuyla soketi NONBLOCK yani
+bloklanmayan moda geçirir. Bu sayede program recv veya accept fonksiyonlarını
+çağırdığında yeni veri yoksa sonsuza kadar bekleyerek kitlenmez çalışmaya devam eder.
+
+
+
+bind: Oluşturulan isimsiz soketi, konfigüre edilen port numarasına ve INADDR_ANY komutuyla
+tüm ağ arayüzüne sabitler
+
+
+listen:
+
+Soketi dinleme moduna alır ve tüm tcp taleplerine açık hale gelir.
+
+poll:
+
+çoklu girdi çıktı yönetimi sağlar. Sunucu tek bir thread üzerinde aynı anda yüzlerce
+soketi izleyebilir. Hangi istemciden veri geldiğini POLLIN ile sürekli tarar.
+
+accept: Dinleme modunda ki sunucu soketine gelen bağlantı isteiğini onaylar.
+Yeni istemci ve sunucu arasında özel haberleşmeyi sağlayacak benzersiz yeni bir Dosya
+tanımlayıcı fd döndürürü.
+
+recv ve send: Tcp üzerinden ham veri okuma yazma için kullanılır.
+
+signal: sinyalleri yakalamk için kullanılır.
+
