@@ -2,6 +2,7 @@
 
 Server::Server(int port, std::string password) : _port(port), _password(password), _serverFd(-1), _is_running(true){
     initCommands(); // komut haritası başladı öncesinde yoktu
+    _channels["#42test"] = new Channel("#42test");
 }
 
 Server::~Server(){
@@ -65,17 +66,26 @@ void Server::runner(){
     }
 }
 
-void    Server::closerFds(){
-    //sunucu kapanırken açık olan tüm soketleri kapatma
+// server.cpp içindeki closerFds() fonksiyonunu şu şekilde güncelle:
+
+void Server::closerFds(){
+    // sunucu kapanırken açık olan tüm soketleri kapatma
     for(size_t i = 0; i < _fds.size(); i++){
         std::cout << "FD " << _fds[i].fd << " is closing." << std::endl;
         close(_fds[i].fd);
     }
+    // Client'ları temizleme
     for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
-        delete it->second; // içerideki new Client nesnelerini silip definitely lost'u engeller!
+        delete it->second; 
     }
     _clients.clear();
     _fds.clear();
+    //Kanalları temizleme
+    for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
+        delete it->second; 
+    }
+    _channels.clear();
+    std::cout << "All channels are deleted and memory is freed." << std::endl;
 }
 
 void    Server::clientRemover(int fd){

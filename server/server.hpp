@@ -15,7 +15,7 @@
 #include <arpa/inet.h>  // inet_ntoa gibi dönüşümler için
 #include "client.hpp"   // Client sınıfı tanımı için
 #include <cctype>
-
+#include "channel.hpp"
 class Server {
     private:
         int         _port;
@@ -29,7 +29,7 @@ class Server {
         typedef void (Server::*CommandHandler)(int, std::vector<std::string>);
         
         std::map<std::string, CommandHandler> _commands;
-
+        std::map<std::string, Channel*> _channels; // kanal ismine karşılık kanal nesnesi
     public:
         static bool _signal; // Sunucuyu kapatmak için statik sinyal değişkeni
         
