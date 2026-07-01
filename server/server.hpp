@@ -52,6 +52,8 @@ class Server {
         void cmdNick(int fd, std::vector<std::string> args);
         void cmdUser(int fd, std::vector<std::string> args);
         void initCommands();
+        void cmdPass(int fd, std::vector<std::string> args);
+        
 }; 
 
 

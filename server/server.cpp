@@ -215,6 +215,10 @@ void Server::parseCommand(int fd, std::string command){
 }
 
 void    Server::cmdNick(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isPassSet()){
+        std::cout << "Error!" << std::endl;
+        return ;
+    }
     if(args.empty()){
         std::cout << "Error: NICK command needs a parameter!" << std::endl;
         return;
@@ -232,6 +236,10 @@ void    Server::cmdNick(int fd, std::vector<std::string> args){
 }
 
 void    Server::cmdUser(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isPassSet()){
+        std::cout << "Error!" << std::endl;
+        return;
+    }
     if(args.size() < 4){
         std::cout << "Error: USER command needs 4 parameters!" << std::endl;
         return;
@@ -253,7 +261,7 @@ void    Server::initCommands(){
     // hangi komut geldiğinde hangi fonksiyonun çalışacağını burada ekliyoruz
     _commands["NICK"] = &Server::cmdNick;
     _commands["USER"] = &Server::cmdUser;
-
+    _commands["PASS"] = &Server::cmdPass;
     // Hayri yeni komutlar ekleyince bende ekleme işlemine devam edeceğim
 }
 
@@ -263,5 +271,17 @@ void    Server::sendMessage(int fd, std::string message){
     // send fonksitonu ile veriyi fd üzerinden netcat/ırc istemcisine göndericez
     if(send(fd, message.c_str(), message.size(), 0) == -1){
         std::cerr << "Error: Cannot send message to FD" << fd << std::endl;
+    }
+}
+
+void    Server::cmdPass(int fd, std::vector<std::string> args){
+    if(!args){
+        std::cout << "Argument is has to something!" << std::endl;
+        return;
+    }
+    if(args[0] == _password){
+        _clients[fd]->setPassSet(true);
+        else
+            std::cout << "Wrong Password!" << clientRemover(fd) << std::endl;
     }
 }
