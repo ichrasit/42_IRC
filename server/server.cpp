@@ -179,7 +179,8 @@ void Server::handleClientData(int fd){
 
         // komutu işlemek üzere parsere gönderiyoruz
         parseCommand(fd, command);
-
+        if(_clients.count(fd) == 0)
+            return;
         // işlenen kısımı ve \n karakterini (pos + 1) bufferından siliyoruz
         _clients[fd]->eraseBuffer(pos + 1);
         client_buffer = _clients[fd]->getBuffer(); // referansı güncelliyoruz
@@ -275,13 +276,17 @@ void    Server::sendMessage(int fd, std::string message){
 }
 
 void    Server::cmdPass(int fd, std::vector<std::string> args){
-    if(!args){
+    if(args.empty()){
         std::cout << "Argument is has to something!" << std::endl;
         return;
     }
     if(args[0] == _password){
         _clients[fd]->setPassSet(true);
-        else
-            std::cout << "Wrong Password!" << clientRemover(fd) << std::endl;
+        std::cout << "correct password" << std::endl;
+    }
+    else{
+        std::cout << "Wrong Password!"  << std::endl;
+        sendMessage(fd, ":ircserv 464 :Password incorrect");
+        clientRemover(fd);
     }
 }

@@ -11,7 +11,7 @@ class Client{
         bool _isNickSet;
         bool _isUserSet;
         bool _isRegistered;
-        bool _isPassSet;
+        bool _isPassSet = false;
     public:
         Client(int fd) : _fd(fd), _buffer(""), _isNickSet(false), _isUserSet(false), _isRegistered(false) {}
         ~Client(){}
@@ -34,7 +34,7 @@ class Client{
         bool isRegistered() const { return _isRegistered; }
         void setRegistered(bool status) { _isRegistered = status; }
         bool isPassSet() {return _isPassSet;}
-        void setPassSet() {_isPassSet = false;}
+        void setPassSet(bool status) {_isPassSet = status;}
 };
 
 #endif
