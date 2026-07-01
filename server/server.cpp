@@ -232,7 +232,7 @@ void    Server::cmdNick(int fd, std::vector<std::string> args){
     if(_clients[fd]->isUserSet() && !_clients[fd]->isRegistered()){
         _clients[fd]->setRegistered(true);
         std::cout << "🎉 FD " << fd << " is fully registered to the server!" << std::endl;
-        sendMessage(fd, ":ircserv 001 " + args[0] + " :Welcome to the ft_irc Network!");
+        sendNumeric(fd, "001", "Welcome to the ft_irc Network!");
     }
 }
 
@@ -254,7 +254,7 @@ void    Server::cmdUser(int fd, std::vector<std::string> args){
         _clients[fd]->setRegistered(true);
         std::cout << "🎉 FD " << fd << " is fully registered to the server!" << std::endl;
         
-        sendMessage(fd, ":ircserv 001 * :Welcome to the ft_irc Network!");
+        sendNumeric(fd, "001", "Welcome to the ft_irc Network!");
     }
 }
 
@@ -287,7 +287,7 @@ void    Server::cmdPass(int fd, std::vector<std::string> args){
     }
     else{
         std::cout << "Wrong Password!"  << std::endl;
-        sendMessage(fd, ":ircserv 464 :Password incorrect");
+        sendNumeric(fd, "464", "Password incorrect");
         clientRemover(fd);
     }
 }
@@ -300,4 +300,13 @@ void    Server::cmdPing(int fd, std::vector<std::string> args){
     std::string pong_reply = "PONG " + args[0];
     sendMessage(fd, pong_reply);
     std::cout << "Ping received"<< std::endl;
+}
+
+void    Server::sendNumeric(int fd, std::string numeric, std::string message){
+    // client'e eklendikten sonra getNickName alıncak
+
+    std::string nick = "*";
+    
+    std::string formatted_msg = ":ircserv " + numeric, + " " + nick + " :" message;
+    sendMessage(fd, formatted_msg);
 }
