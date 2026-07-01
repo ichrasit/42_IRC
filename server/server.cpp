@@ -263,6 +263,7 @@ void    Server::initCommands(){
     _commands["NICK"] = &Server::cmdNick;
     _commands["USER"] = &Server::cmdUser;
     _commands["PASS"] = &Server::cmdPass;
+    _commands["PING"] = &Server::cmdPing;
     // Hayri yeni komutlar ekleyince bende ekleme işlemine devam edeceğim
 }
 
@@ -289,4 +290,14 @@ void    Server::cmdPass(int fd, std::vector<std::string> args){
         sendMessage(fd, ":ircserv 464 :Password incorrect");
         clientRemover(fd);
     }
+}
+
+void    Server::cmdPing(int fd, std::vector<std::string> args){
+    if(args.empty()){
+        std::cout << "There is no parameter!" << std::endl;
+        return ;
+    }
+    std::string pong_reply = "PONG " + args[0];
+    sendMessage(fd, pong_reply);
+    std::cout << "Ping received"<< std::endl;
 }
