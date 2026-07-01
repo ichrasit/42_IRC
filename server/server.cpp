@@ -307,6 +307,6 @@ void    Server::sendNumeric(int fd, std::string numeric, std::string message){
 
     std::string nick = "*";
     
-    std::string formatted_msg = ":ircserv " + numeric, + " " + nick + " :" message;
+    std::string formatted_msg = ":ircserv " + numeric + " " + nick + " :" + message;
     sendMessage(fd, formatted_msg);
 }
