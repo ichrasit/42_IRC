@@ -55,6 +55,7 @@ class Server {
         void initCommands();
         void cmdPass(int fd, std::vector<std::string> args);
         void cmdPing(int fd, std::vector<std::string> args);
+        void cmdPrivmsg(int fd, std::vector<std::string> args); // PRIVMSG komutu
         void sendNumeric(int fd, std::string numeric, std::string message);
 };
 

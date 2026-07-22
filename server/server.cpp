@@ -4,6 +4,7 @@ Server::Server(int port, std::string password) : _port(port), _password(password
     initCommands(); // komut haritasi
     _channels["#42test"] = new Channel("#42test");
 }
+
 Server::~Server(){
     closerFds();
 }
@@ -29,7 +30,7 @@ void    Server::serverInitializer(){
     // adres ve port yapilandirmasi
     add.sin_family = AF_INET; // IPV4 kullan
     add.sin_addr.s_addr = INADDR_ANY; // Gelen her ip'yi kabul et
-    add.sin_port = htons(_port); // port'u internet byte sırasına cevir
+    add.sin_port = htons(_port); // port'u internet byte sirasina cevir
 
     // sockete port baglamak
     if(bind(_serverFd, (struct sockaddr *)&add, sizeof(add)) == -1)
@@ -211,7 +212,7 @@ void Server::parseCommand(int fd, std::string command){
     
     std::string cmd = args[0]; // ilk kelime komutun kendisidir
 
-    // komut ismini buyuk harfe ceviriyoruz (nick -> NICK, ping -> PING uyumu icin)
+    // komut ismini buyuk harfe ceviriyoruz (nick -> NICK, ping -> PING, privmsg -> PRIVMSG uyumu icin)
     for (size_t i = 0; i < cmd.length(); ++i) {
         cmd[i] = std::toupper(cmd[i]);
     }
@@ -240,9 +241,9 @@ void    Server::cmdNick(int fd, std::vector<std::string> args){
     // nick kullanimda mi kontrol ediyoruz
     for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
         if(it->second->getNickname() == newNick && it->first != fd){
-            sendNumeric(fd, "433", newNick + " Nickname is already in use"); // ':' karakterini kaldirdik
+            sendNumeric(fd, "433", newNick + " Nickname is already in use");
             return;
-}
+        }
     }
 
     _clients[fd]->setNickname(newNick);
@@ -296,6 +297,7 @@ void    Server::initCommands(){
     _commands["USER"] = &Server::cmdUser;
     _commands["PASS"] = &Server::cmdPass;
     _commands["PING"] = &Server::cmdPing;
+    _commands["PRIVMSG"] = &Server::cmdPrivmsg; // PRIVMSG ekledik
 }
 
 void    Server::sendMessage(int fd, std::string message){
@@ -330,6 +332,64 @@ void    Server::cmdPing(int fd, std::vector<std::string> args){
     std::string pong_reply = "PONG " + args[0];
     sendMessage(fd, pong_reply);
     std::cout << "Ping received" << std::endl;
+}
+
+void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
+    // kullanici tam kayitli degilse mesaj atamaz
+    if (!_clients[fd]->isRegistered()) {
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    // hedef parametresi yoksa
+    if (args.empty()) {
+        sendNumeric(fd, "411", "No recipient given (PRIVMSG)");
+        return;
+    }
+    // mesaj metni yoksa
+    if (args.size() < 2) {
+        sendNumeric(fd, "412", "No text to send");
+        return;
+    }
+
+    std::string target = args[0];
+    
+    // mesaj birden fazla kelimeden olusabilecegi icin geri kalani birlestiriyoruz
+    std::string message = "";
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (i > 1) message += " ";
+        message += args[i];
+    }
+
+    // mesaj metninin basindaki ':' karakterini temizliyoruz
+    if (message[0] == ':')
+        message.erase(0, 1);
+
+    // IRC standart mesaj formati: :sender_nick PRIVMSG target :message
+    std::string senderNick = _clients[fd]->getNickname();
+    std::string fullMsg = ":" + senderNick + " PRIVMSG " + target + " :" + message;
+
+    // Hedef bir kanal mi? (# ile basliyorsa)
+    if (target[0] == '#') {
+        if (_channels.find(target) != _channels.end()) {
+            _channels[target]->broadcast(fullMsg, _clients[fd]);
+        } else {
+            sendNumeric(fd, "401", target + " :No such nick/channel");
+        }
+    } 
+    // Hedef kisi ise (birebir ozel mesaj)
+    else {
+        bool found = false;
+        for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+            if (it->second->getNickname() == target) {
+                sendMessage(it->first, fullMsg);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            sendNumeric(fd, "401", target + " :No such nick/channel");
+        }
+    }
 }
 
 void    Server::sendNumeric(int fd, std::string numeric, std::string message){
