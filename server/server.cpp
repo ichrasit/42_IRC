@@ -407,25 +407,45 @@ void    Server::cmdJoin(int fd, std::vector<std::string> args){
     }
 
     std::string chanName = args[0];
+    std::string key = (args.size() > 1) ? args[1] : "";
+
     if (chanName[0] != '#') {
         chanName = "#" + chanName;
     }
 
-    // kanal haritada yoksa yeni kanal olusturuyoruz
+    // kanal yoksa yeni olustur
     if (_channels.find(chanName) == _channels.end()) {
         _channels[chanName] = new Channel(chanName);
         _channels[chanName]->addMember(_clients[fd]);
-        _channels[chanName]->addOperator(_clients[fd]); // kanali kuran kisi operatordur
+        _channels[chanName]->addOperator(_clients[fd]);
     } else {
-        _channels[chanName]->addMember(_clients[fd]);
+        Channel* chan = _channels[chanName];
+
+        // 1. Şifre kontrolü (+k)
+        if (!chan->getPassword().empty() && chan->getPassword() != key) {
+            sendNumeric(fd, "475", chanName + " :Cannot join channel (+k) - bad key");
+            return;
+        }
+
+        // 2. Limit kontrolü (+l)
+        if (chan->getUserLimit() > 0 && chan->getMemberCount() >= chan->getUserLimit()) {
+            sendNumeric(fd, "471", chanName + " :Cannot join channel (+l) - channel is full");
+            return;
+        }
+
+        // 3. Invite-only kontrolü (+i)
+        if (chan->isInviteOnly() && !chan->isInvited(_clients[fd])) {
+            sendNumeric(fd, "473", chanName + " :Cannot join channel (+i) - invite only");
+            return;
+        }
+
+        chan->addMember(_clients[fd]);
     }
 
-    // JOIN mesajini hem katilana hem de kanaldakilere yolluyoruz
     std::string joinMsg = ":" + _clients[fd]->getNickname() + " JOIN " + chanName;
     sendMessage(fd, joinMsg);
     _channels[chanName]->broadcast(joinMsg, _clients[fd]);
 }
-
 void    Server::cmdPart(int fd, std::vector<std::string> args){
     if (!_clients[fd]->isRegistered()){
         sendNumeric(fd, "451", "You have not registered");
@@ -552,6 +572,9 @@ void    Server::cmdInvite(int fd, std::vector<std::string> args){
         return;
     }
 
+    // davetliler listesine ekliyoruz
+    chan->addInvite(targetClient);
+
     std::string inviteMsg = ":" + _clients[fd]->getNickname() + " INVITE " + targetNick + " " + chanName;
     sendMessage(targetClient->getFd(), inviteMsg);
     sendNumeric(fd, "341", targetNick + " " + chanName);
@@ -580,7 +603,7 @@ void    Server::cmdTopic(int fd, std::vector<std::string> args){
         return;
     }
 
-    // Sadece kanal konusunu okuma
+    // Sadece konu okuma
     if (args.size() == 1){
         if (chan->getTopic().empty()){
             sendNumeric(fd, "331", chanName + " :No topic is set");
@@ -590,7 +613,12 @@ void    Server::cmdTopic(int fd, std::vector<std::string> args){
         return;
     }
 
-    // Konu degistirme: argumanlarin geri kalanini tek bir stringde birlestiriyoruz
+    // +t modu aktifse ve degistiren kisi operator degilse engel veriyoruz
+    if (chan->isTopicRestricted() && !chan->isOperator(_clients[fd])) {
+        sendNumeric(fd, "482", chanName + " :You're not channel operator");
+        return;
+    }
+
     std::string newTopic = "";
     for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) newTopic += " ";
@@ -616,13 +644,71 @@ void    Server::cmdMode(int fd, std::vector<std::string> args){
 
     std::string chanName = args[0];
     if (_channels.find(chanName) == _channels.end()){
+        return; // kullanici modlari sorgusu pas gecilir
+    }
+
+    Channel* chan = _channels[chanName];
+
+    // Sadece mod sorgusu (MODE #kanal)
+    if (args.size() == 1){
+        std::string activeModes = "+";
+        if (chan->isInviteOnly()) activeModes += "i";
+        if (chan->isTopicRestricted()) activeModes += "t";
+        if (!chan->getPassword().empty()) activeModes += "k";
+        if (chan->getUserLimit() > 0) activeModes += "l";
+        
+        sendNumeric(fd, "324", chanName + " " + activeModes);
         return;
     }
 
-    if (args.size() == 1){
-        sendNumeric(fd, "324", chanName + " +t");
+    // Mod degisikligi icin operator kontrolu
+    if (!chan->isOperator(_clients[fd])) {
+        sendNumeric(fd, "482", chanName + " :You're not channel operator");
         return;
     }
+
+    std::string modeStr = args[1];
+    bool setFlag = true; // '+' ise true, '-' ise false
+
+    for (size_t i = 0; i < modeStr.length(); ++i) {
+        char c = modeStr[i];
+        if (c == '+') setFlag = true;
+        else if (c == '-') setFlag = false;
+        else if (c == 'i') {
+            chan->setInviteOnly(setFlag);
+        }
+        else if (c == 't') {
+            chan->setTopicRestricted(setFlag);
+        }
+        else if (c == 'k') {
+            if (setFlag && args.size() > 2)
+                chan->setPassword(args[2]);
+            else if (!setFlag)
+                chan->setPassword("");
+        }
+        else if (c == 'l') {
+            if (setFlag && args.size() > 2)
+                chan->setUserLimit(std::atoi(args[2].c_str()));
+            else if (!setFlag)
+                chan->setUserLimit(0);
+        }
+        else if (c == 'o') {
+            if (args.size() > 2) {
+                std::string targetNick = args[2];
+                for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+                    if (it->second->getNickname() == targetNick) {
+                        if (setFlag) chan->addOperator(it->second);
+                        else chan->removeOperator(it->second);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    std::string modeMsg = ":" + _clients[fd]->getNickname() + " MODE " + chanName + " " + modeStr;
+    sendMessage(fd, modeMsg);
+    chan->broadcast(modeMsg, _clients[fd]);
 }
 
 void    Server::sendNumeric(int fd, std::string numeric, std::string message){
