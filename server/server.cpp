@@ -2,7 +2,6 @@
 
 Server::Server(int port, std::string password) : _port(port), _password(password), _serverFd(-1){
     initCommands(); // komut haritasi
-    _channels["#42test"] = new Channel("#42test");
 }
 
 Server::~Server(){
@@ -90,7 +89,6 @@ void Server::closerFds(){
 }
 
 void    Server::clientRemover(int fd){
-    // Kullanici bir kanaldaysa dangling pointer kalmasin diye kanallardan temizliyoruz
     if (_clients.count(fd)) {
         Client* client = _clients[fd];
         for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
@@ -307,14 +305,17 @@ void    Server::initCommands(){
     _commands["PASS"] = &Server::cmdPass;
     _commands["PING"] = &Server::cmdPing;
     _commands["PRIVMSG"] = &Server::cmdPrivmsg;
-    _commands["JOIN"] = &Server::cmdJoin; // JOIN eklendi
-    _commands["PART"] = &Server::cmdPart; // PART eklendi
-    _commands["QUIT"] = &Server::cmdQuit; // QUIT eklendi
+    _commands["JOIN"] = &Server::cmdJoin;
+    _commands["PART"] = &Server::cmdPart;
+    _commands["QUIT"] = &Server::cmdQuit;
+    _commands["KICK"] = &Server::cmdKick;
+    _commands["INVITE"] = &Server::cmdInvite;
+    _commands["TOPIC"] = &Server::cmdTopic;
+    _commands["MODE"] = &Server::cmdMode;
 }
 
 void    Server::sendMessage(int fd, std::string message){
     message += "\r\n";
-    // send fonksiyonu ile veriyi fd uzerinden netcat/irc istemcisine gondericez
     if(send(fd, message.c_str(), message.size(), 0) == -1){
         std::cerr << "Error: Cannot send message to FD " << fd << std::endl;
     }
@@ -458,6 +459,170 @@ void    Server::cmdQuit(int fd, std::vector<std::string> args){
     (void)args;
     std::cout << "FD " << fd << " sent QUIT command." << std::endl;
     clientRemover(fd);
+}
+
+void    Server::cmdKick(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isRegistered()){
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    if (args.size() < 2){
+        sendNumeric(fd, "461", "KICK :Not enough parameters");
+        return;
+    }
+
+    std::string chanName = args[0];
+    std::string targetNick = args[1];
+
+    if (_channels.find(chanName) == _channels.end()){
+        sendNumeric(fd, "403", chanName + " :No such channel");
+        return;
+    }
+
+    Channel* chan = _channels[chanName];
+
+    // atan kisi operator mu kontrolu
+    if (!chan->isOperator(_clients[fd])){
+        sendNumeric(fd, "482", chanName + " :You're not channel operator");
+        return;
+    }
+
+    // atilacak kisi sunucuda var mi ve kanalda mi?
+    Client* targetClient = NULL;
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
+        if (it->second->getNickname() == targetNick){
+            targetClient = it->second;
+            break;
+        }
+    }
+
+    if (!targetClient || !chan->isMember(targetClient)){
+        sendNumeric(fd, "441", targetNick + " " + chanName + " :They aren't on that channel");
+        return;
+    }
+
+    std::string kickMsg = ":" + _clients[fd]->getNickname() + " KICK " + chanName + " " + targetNick + " :Kicked by operator";
+    sendMessage(fd, kickMsg);
+    chan->broadcast(kickMsg, _clients[fd]);
+
+    chan->removeMember(targetClient);
+    chan->removeOperator(targetClient);
+}
+
+void    Server::cmdInvite(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isRegistered()){
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    if (args.size() < 2){
+        sendNumeric(fd, "461", "INVITE :Not enough parameters");
+        return;
+    }
+
+    std::string targetNick = args[0];
+    std::string chanName = args[1];
+
+    if (_channels.find(chanName) == _channels.end()){
+        sendNumeric(fd, "403", chanName + " :No such channel");
+        return;
+    }
+
+    Channel* chan = _channels[chanName];
+
+    if (!chan->isMember(_clients[fd])){
+        sendNumeric(fd, "442", chanName + " :You're not on that channel");
+        return;
+    }
+
+    if (!chan->isOperator(_clients[fd])){
+        sendNumeric(fd, "482", chanName + " :You're not channel operator");
+        return;
+    }
+
+    Client* targetClient = NULL;
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
+        if (it->second->getNickname() == targetNick){
+            targetClient = it->second;
+            break;
+        }
+    }
+
+    if (!targetClient){
+        sendNumeric(fd, "401", targetNick + " :No such nick/channel");
+        return;
+    }
+
+    std::string inviteMsg = ":" + _clients[fd]->getNickname() + " INVITE " + targetNick + " " + chanName;
+    sendMessage(targetClient->getFd(), inviteMsg);
+    sendNumeric(fd, "341", targetNick + " " + chanName);
+}
+
+void    Server::cmdTopic(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isRegistered()){
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    if (args.empty()){
+        sendNumeric(fd, "461", "TOPIC :Not enough parameters");
+        return;
+    }
+
+    std::string chanName = args[0];
+    if (_channels.find(chanName) == _channels.end()){
+        sendNumeric(fd, "403", chanName + " :No such channel");
+        return;
+    }
+
+    Channel* chan = _channels[chanName];
+
+    if (!chan->isMember(_clients[fd])){
+        sendNumeric(fd, "442", chanName + " :You're not on that channel");
+        return;
+    }
+
+    // Sadece kanal konusunu okuma
+    if (args.size() == 1){
+        if (chan->getTopic().empty()){
+            sendNumeric(fd, "331", chanName + " :No topic is set");
+        } else {
+            sendNumeric(fd, "332", chanName + " :" + chan->getTopic());
+        }
+        return;
+    }
+
+    // Konu degistirme: argumanlarin geri kalanini tek bir stringde birlestiriyoruz
+    std::string newTopic = "";
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (i > 1) newTopic += " ";
+        newTopic += args[i];
+    }
+    if (newTopic[0] == ':') newTopic.erase(0, 1);
+
+    chan->setTopic(newTopic);
+    std::string topicMsg = ":" + _clients[fd]->getNickname() + " TOPIC " + chanName + " :" + newTopic;
+    sendMessage(fd, topicMsg);
+    chan->broadcast(topicMsg, _clients[fd]);
+}
+
+void    Server::cmdMode(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isRegistered()){
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    if (args.empty()){
+        sendNumeric(fd, "461", "MODE :Not enough parameters");
+        return;
+    }
+
+    std::string chanName = args[0];
+    if (_channels.find(chanName) == _channels.end()){
+        return;
+    }
+
+    if (args.size() == 1){
+        sendNumeric(fd, "324", chanName + " +t");
+        return;
+    }
 }
 
 void    Server::sendNumeric(int fd, std::string numeric, std::string message){

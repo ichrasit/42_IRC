@@ -56,9 +56,16 @@ class Server {
         void cmdPass(int fd, std::vector<std::string> args);
         void cmdPing(int fd, std::vector<std::string> args);
         void cmdPrivmsg(int fd, std::vector<std::string> args);
-        void cmdJoin(int fd, std::vector<std::string> args); // JOIN komutu
-        void cmdPart(int fd, std::vector<std::string> args); // PART komutu
-        void cmdQuit(int fd, std::vector<std::string> args); // QUIT komutu
+        void cmdJoin(int fd, std::vector<std::string> args);
+        void cmdPart(int fd, std::vector<std::string> args);
+        void cmdQuit(int fd, std::vector<std::string> args);
+        
+        // Operatör ve Kanal Yetki Komutları
+        void cmdKick(int fd, std::vector<std::string> args);   // KICK
+        void cmdInvite(int fd, std::vector<std::string> args); // INVITE
+        void cmdTopic(int fd, std::vector<std::string> args);  // TOPIC
+        void cmdMode(int fd, std::vector<std::string> args);   // MODE
+        
         void sendNumeric(int fd, std::string numeric, std::string message);
 };
 
