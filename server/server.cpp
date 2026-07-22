@@ -90,6 +90,15 @@ void Server::closerFds(){
 }
 
 void    Server::clientRemover(int fd){
+    // Kullanici bir kanaldaysa dangling pointer kalmasin diye kanallardan temizliyoruz
+    if (_clients.count(fd)) {
+        Client* client = _clients[fd];
+        for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+            it->second->removeMember(client);
+            it->second->removeOperator(client);
+        }
+    }
+
     // FD'yi isletim sisteminde kapatmak (baglanti tamamen kesilir)
     close(fd);
 
@@ -212,7 +221,7 @@ void Server::parseCommand(int fd, std::string command){
     
     std::string cmd = args[0]; // ilk kelime komutun kendisidir
 
-    // komut ismini buyuk harfe ceviriyoruz (nick -> NICK, ping -> PING, privmsg -> PRIVMSG uyumu icin)
+    // komut ismini buyuk harfe ceviriyoruz
     for (size_t i = 0; i < cmd.length(); ++i) {
         cmd[i] = std::toupper(cmd[i]);
     }
@@ -297,7 +306,10 @@ void    Server::initCommands(){
     _commands["USER"] = &Server::cmdUser;
     _commands["PASS"] = &Server::cmdPass;
     _commands["PING"] = &Server::cmdPing;
-    _commands["PRIVMSG"] = &Server::cmdPrivmsg; // PRIVMSG ekledik
+    _commands["PRIVMSG"] = &Server::cmdPrivmsg;
+    _commands["JOIN"] = &Server::cmdJoin; // JOIN eklendi
+    _commands["PART"] = &Server::cmdPart; // PART eklendi
+    _commands["QUIT"] = &Server::cmdQuit; // QUIT eklendi
 }
 
 void    Server::sendMessage(int fd, std::string message){
@@ -335,40 +347,32 @@ void    Server::cmdPing(int fd, std::vector<std::string> args){
 }
 
 void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
-    // kullanici tam kayitli degilse mesaj atamaz
     if (!_clients[fd]->isRegistered()) {
         sendNumeric(fd, "451", "You have not registered");
         return;
     }
-    // hedef parametresi yoksa
     if (args.empty()) {
         sendNumeric(fd, "411", "No recipient given (PRIVMSG)");
         return;
     }
-    // mesaj metni yoksa
     if (args.size() < 2) {
         sendNumeric(fd, "412", "No text to send");
         return;
     }
 
     std::string target = args[0];
-    
-    // mesaj birden fazla kelimeden olusabilecegi icin geri kalani birlestiriyoruz
     std::string message = "";
     for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) message += " ";
         message += args[i];
     }
 
-    // mesaj metninin basindaki ':' karakterini temizliyoruz
     if (message[0] == ':')
         message.erase(0, 1);
 
-    // IRC standart mesaj formati: :sender_nick PRIVMSG target :message
     std::string senderNick = _clients[fd]->getNickname();
     std::string fullMsg = ":" + senderNick + " PRIVMSG " + target + " :" + message;
 
-    // Hedef bir kanal mi? (# ile basliyorsa)
     if (target[0] == '#') {
         if (_channels.find(target) != _channels.end()) {
             _channels[target]->broadcast(fullMsg, _clients[fd]);
@@ -376,7 +380,6 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
             sendNumeric(fd, "401", target + " :No such nick/channel");
         }
     } 
-    // Hedef kisi ise (birebir ozel mesaj)
     else {
         bool found = false;
         for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
@@ -392,10 +395,73 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
     }
 }
 
+void    Server::cmdJoin(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isRegistered()){
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    if (args.empty()){
+        sendNumeric(fd, "461", "JOIN :Not enough parameters");
+        return;
+    }
+
+    std::string chanName = args[0];
+    if (chanName[0] != '#') {
+        chanName = "#" + chanName;
+    }
+
+    // kanal haritada yoksa yeni kanal olusturuyoruz
+    if (_channels.find(chanName) == _channels.end()) {
+        _channels[chanName] = new Channel(chanName);
+        _channels[chanName]->addMember(_clients[fd]);
+        _channels[chanName]->addOperator(_clients[fd]); // kanali kuran kisi operatordur
+    } else {
+        _channels[chanName]->addMember(_clients[fd]);
+    }
+
+    // JOIN mesajini hem katilana hem de kanaldakilere yolluyoruz
+    std::string joinMsg = ":" + _clients[fd]->getNickname() + " JOIN " + chanName;
+    sendMessage(fd, joinMsg);
+    _channels[chanName]->broadcast(joinMsg, _clients[fd]);
+}
+
+void    Server::cmdPart(int fd, std::vector<std::string> args){
+    if (!_clients[fd]->isRegistered()){
+        sendNumeric(fd, "451", "You have not registered");
+        return;
+    }
+    if (args.empty()){
+        sendNumeric(fd, "461", "PART :Not enough parameters");
+        return;
+    }
+
+    std::string chanName = args[0];
+    if (_channels.find(chanName) == _channels.end()){
+        sendNumeric(fd, "403", chanName + " :No such channel");
+        return;
+    }
+
+    if (!_channels[chanName]->isMember(_clients[fd])){
+        sendNumeric(fd, "442", chanName + " :You're not on that channel");
+        return;
+    }
+
+    std::string partMsg = ":" + _clients[fd]->getNickname() + " PART " + chanName;
+    sendMessage(fd, partMsg);
+    _channels[chanName]->broadcast(partMsg, _clients[fd]);
+
+    _channels[chanName]->removeMember(_clients[fd]);
+    _channels[chanName]->removeOperator(_clients[fd]);
+}
+
+void    Server::cmdQuit(int fd, std::vector<std::string> args){
+    (void)args;
+    std::cout << "FD " << fd << " sent QUIT command." << std::endl;
+    clientRemover(fd);
+}
+
 void    Server::sendNumeric(int fd, std::string numeric, std::string message){
-    // kullanicinin anlik nickname bilgisini aliyoruz
     std::string nick = _clients[fd]->getNickname();
-    
     std::string formatted_msg = ":ircserv " + numeric + " " + nick + " :" + message;
     sendMessage(fd, formatted_msg);
 }
