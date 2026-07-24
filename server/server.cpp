@@ -474,6 +474,26 @@ void    Server::cmdJoin(int fd, std::vector<std::string> args){
     std::string joinMsg = ":" + _clients[fd]->getNickname() + " JOIN " + chanName;
     sendMessage(fd, joinMsg);
     _channels[chanName]->broadcast(joinMsg, _clients[fd]);
+
+    Channel* chan = _channels[chanName];
+    std::string memberList = "";
+
+    for(size_t i = 0; i < _fds.size(); ++i){
+        int currentFd = _fds[i].fd;
+        if(_clients.find(currentFd) != _clients.end()){
+            Client* cl = _clients[currentFd];
+            if(chan->isMember(cl)){
+                if(!memberList.empty())
+                    memberList += " ";
+                if (chan->isOperator(cl))
+                    memberList += "@";
+                memberList += cl->getNickname;
+            }
+        }
+    }
+
+    sendNumeric(fd, "353", "= " + chanName + " :" + memberList);
+    sendNumeric(fd, "366", chanName + " :End of /NAMES list.");
 }
 void    Server::cmdPart(int fd, std::vector<std::string> args){
     if (!_clients[fd]->isRegistered()){
