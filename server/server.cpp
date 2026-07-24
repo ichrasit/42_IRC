@@ -243,6 +243,9 @@ void Server::parseCommand(int fd, std::string command){
         cmd[i] = std::toupper(cmd[i]);
     }
 
+    if(!args.empty()){
+        args.erase(args.begin());
+    }
     args.erase(args.begin()); // ilk kelimeyi listeden cikar geriye sadece parametreler kalsin
 
     if(_commands.find(cmd) != _commands.end()){
