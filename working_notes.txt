@@ -1,0 +1,25 @@
+Buffer neden var?
+
+TCP protokolu veriyi bir paket degil, su gibi bir akis olarak atar stream seklinde. Karsi taraf PING\r\n yolladiginda internetin durumuna gore bize once PI
+1 saniye sonra ise NG\r\n gelebilir. Eger buffer yapmaz isek PI geldiginde Bu komut yok diyip patlariz. Bu yuzden new line gelene kadar her seyi bufferda tutariz
+
+
+Neden hem NONBLOCK hem de POLL?
+
+Sadece NONBLOCK olarak yapip while true ile tum soketleri gezseydik eger busy waiting yapmis olurduk, CPU siserdi ve fanlar cosardi.
+
+Poll ile isletim sistemine ben yattim haci diyip bu 100 soketten hangisine veri gelirse beni uyandir der. CPU yormaz. Soketin NONBLOCK olmasi ise tek bir sokette
+recv yaparken beklenmedik bir takilmada ana programin kitlenmesini onler.
+
+
+Loop ici vectorden eleman silme hata riski:
+
+Dongu i = 0 dan size()'a giderken _fds.erase(fds.begin + i ) yaparsam arkadaki elemanlar one kayar. Bir sonraki i++ adiminda kayan elamani atlamis oluruz.
+Bunu comzenin yolu silme yapilan yerde i-- yapmak ya da silme islemini dongu bittikten sonra yapmaktir.
+
+Neden map containerinda client * kullandim?
+
+Client nesnesinin icinde _buffer, _nickname gibi dinamik string alanlari var.  Map her buyudugunde veya elaman kaydiginda nesnenin kopyalanmasini onlemek a ve
+bellek adresini sabit tutmak icin pointerda kullandik
+
+
