@@ -430,6 +430,13 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
             sendNumeric(fd, "401", target + " :No such nick/channel");
         }
     }
+    std::string message = "";
+    for(size_t i = 1; i < args.size(); ++i){
+        if(i > 1) message += " ";
+        message += args[i];
+    }
+    if(!message.empty() && message[0] == ":")
+        message.erase(0, 1);
 }
 
 void    Server::cmdJoin(int fd, std::vector<std::string> args){
