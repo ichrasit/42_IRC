@@ -706,14 +706,23 @@ void    Server::cmdTopic(int fd, std::vector<std::string> args){
     }
 
     std::string newTopic = "";
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) newTopic += " ";
+    for (size_t i = 1; i < args.size(); ++i){
+        if(i > 1) newTopic += " ";
         newTopic += args[i];
     }
-    if (newTopic[0] == ':') newTopic.erase(0, 1);
+    if(!newTopic.empty() && newTopic[0] == ':')
+        newTopic.erase(0, 1);
 
-    chan->setTopic(newTopic);
-    std::string topicMsg = ":" + _clients[fd]->getNickname() + " TOPIC " + chanName + " :" + newTopic;
+    chan-<setTopic(newTopic);
+
+    std::string topicMsg;
+
+    if(newTopic.empty()){
+        topicMsg = ":" + _clients[fd]->getNickname() + " TOPIC " + chanName + " :";
+    } else{
+        topicMsg = ":" + +_clients[fd]->getNickname() + " TOPIC " + chanName + " :" + newTopic;
+    }
+
     sendMessage(fd, topicMsg);
     chan->broadcast(topicMsg, _clients[fd]);
 }
