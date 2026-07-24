@@ -269,6 +269,23 @@ void    Server::cmdNick(int fd, std::vector<std::string> args){
     _clients[fd]->setNickSet(true);
     std::cout << "FD " << fd << " set nickname to: " << newNick << std::endl;
 
+    std::string oldNick = _clients[fd]->getNickname();
+    std::string newNick = args[0];
+
+    _clients[fd]->setNickname(newNick);
+    _clients[fd]->setNickSet(true);
+
+    // eger kullanici zaten kayitliysa ve nick degistirdiyse kanallara yayinla
+
+    if(_clients[fd]->isRegistered()){
+            std::string nickMsg = ":" + oldNick + " NICK :" + newNick;
+            sendMessage(fd, nickMsg);
+
+            for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
+                if(it->second->isMember(_clients[fd]))
+                    it->second->broadcast(nickMsg, _clients[fd]);
+            }
+    }
     // kayit kontrolu : user'dan once nick girdi mi? ikisi de tamamsa kayit biter
     if(_clients[fd]->isUserSet() && !_clients[fd]->isRegistered()){
         _clients[fd]->setRegistered(true);
