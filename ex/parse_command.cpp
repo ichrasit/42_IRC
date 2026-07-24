@@ -25,3 +25,8 @@ int main()
     for(size_t i = 0; i < res.size(); i++)
         std::cout << "arg " << i << ": " << res[i] << std::endl;
 }
+
+/*
+    B egzersiz bir irc sunucusuna gelen ham stringi PASS secret123 komut ve parametreler olarak ayristirip vector donduruyor
+    bir nevi tokenize ediyor
+*/
