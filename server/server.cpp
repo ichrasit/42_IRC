@@ -482,8 +482,16 @@ void    Server::cmdPart(int fd, std::vector<std::string> args){
 }
 
 void    Server::cmdQuit(int fd, std::vector<std::string> args){
-    (void)args;
-    std::cout << "FD " << fd << " sent QUIT command." << std::endl;
+    std::string reason = (args.empty()) ? "Client Quit" : args[0];
+    if(!reason.empty() && reason[0] == ':')
+        reason.erase(0, 1);
+    std::string quitMsg = ":" + _clients[fd]->getNickname() + " QUIT :Quit " + reason;
+
+    for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
+        if(it->second->isMember(_clients[fd]))
+            it->second->broadcast(quitMsg, _clients[fd]);
+    }
+    std::cout << "FD " >> fd << " sent QUIT command." << std::endl;
     clientRemover(fd);
 }
 
