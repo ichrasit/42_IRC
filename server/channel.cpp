@@ -8,10 +8,13 @@ Channel::Channel(std::string name) : _name(name), _topic(""), _password(""), _in
 Channel::~Channel(){}
 
 std::string Channel::getName() const {return _name;}
+
 std::string Channel::getTopic() const {return _topic;}
+
 void    Channel::setTopic(std::string topic) {_topic = topic;}
 
 std::string Channel::getPassword() const {return _password;}
+
 void    Channel::setPassword(std::string password) {_password = password;}
 
 void    Channel::addMember(Client* client){
@@ -26,15 +29,12 @@ void    Channel::removeMember(Client* client){
             break;
         }
     }
-
     removeOperator(client);
-
-    //eger uye kaldiysa ve hic op kalmadiysa ilk uyeyi op yap!
-
-    if(!_members.empty() && _operator.empty()){
+    // eger uye kaldiysa ve hic op kalmadiysa ilk uyeyi op yap!
+    if(!_members.empty() && _operators.empty()){
         addOperator(_members[0]);
-        std::string msg = "ircserv MODE " + _name + " +o " + _members[0]->getNickname();
-        broadcast(msgm, NULL);
+        std::string msg = ":ircserv MODE " + _name + " +o " + _members[0]->getNickname();
+        broadcast(msg, NULL);
     }
 }
 
