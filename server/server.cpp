@@ -737,7 +737,14 @@ void    Server::cmdMode(int fd, std::vector<std::string> args){
             modeParams += " " + chan->getPassword;
 
         }
-        if(chan->getUser)
+        if(chan->getUserLimit() > 0){
+            activeModes += "l";
+            std::stringstream ss;
+            ss << chan->getUserLimit();
+            modeParams += " " + ss.str()''
+        }
+        sendNumeric(fd, "324", chanName + " " + activeModes + modeParams);
+        return;
     }
 
     // Mod degisikligi icin operator kontrolu
