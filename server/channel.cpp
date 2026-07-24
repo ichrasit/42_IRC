@@ -26,6 +26,16 @@ void    Channel::removeMember(Client* client){
             break;
         }
     }
+
+    removeOperator(client);
+
+    //eger uye kaldiysa ve hic op kalmadiysa ilk uyeyi op yap!
+
+    if(!_members.empty() && _operator.empty()){
+        addOperator(_members[0]);
+        std::string msg = "ircserv MODE " + _name + " +o " + _members[0]->getNickname();
+        broadcast(msgm, NULL);
+    }
 }
 
 bool    Channel::isMember(Client* client) const{
