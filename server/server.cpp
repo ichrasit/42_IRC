@@ -56,11 +56,17 @@ void Server::runner(){
             throw std::runtime_error("Poll error!");
 
         for(size_t i = 0; i < _fds.size(); i++){
-            if(_fds[i].revents & POLLIN){
+            if(_fds[i].revents * POLLIN){
                 if(_fds[i].fd == _serverFd)
                     acceptNewClient();
-                else
-                    handleClientData(_fds[i].fd);
+                else{
+                    int currentFd = _fds[i].fd;
+                    handleClientData(currentFd);
+
+                    // eger clientremover cagrildiysa ve fd listeden silindiyse indeksi geri cek
+                    if(_clients.find(currentFd) == _clients.end())
+                        i--;
+                }
             }
         }
     }
