@@ -169,6 +169,12 @@ void Server::handleClientData(int fd){
     // gelen veriyi o client'in kisisel bufferina eklememiz gerekiyor
     _clients[fd]->appendBuffer(std::string(buffer, bytes_received));
 
+    if(_clients[fd]->getBuffer().size() > 2048) {
+        std::cerr << "Buffer overflow protection: Closing FD " << fd << std::endl;
+        clientRemover(fd);
+        return;
+    }
+
     // EVRENSEL BUFFER KONTROLU (Mac ve Ubuntu Uyumu)
     std::string &client_buffer = _clients[fd]->getBuffer();
     size_t pos;

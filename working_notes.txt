@@ -47,3 +47,15 @@ it->first ve it->second
 std map client ve ya aynisinin channel olani birer key value konteynerlardir. it->firs mapin keyidir fd numarasi int veya kanal adi string
 it->second mapin valudesu CLient veya Channel nesnesini adresini tutan pointer.
 
+
+SIGPIPE disinda send cagrisinin engellenmesi/bloklanmasi
+
+kucuk mesajlarda os arabellegi dolmadigi icin dogrudan send() genelde sorun cikarmaz. Ancak kusursuz bir irc sunucusunda
+cliente veri gondermeden once pollfd.events alanina pollout eklenip soketin yazilabilir durumda olup olmadigini kontrol edilir. Soket yazmaya hazirsa send cagrilir
+
+
+Buyuk komut/mesaj geldiginde buffer guvenligi flooding/memorylimit
+
+Eger buffer boyutu icin bir ust sinir ornegin 512 bayt koymazsak appendbuffer surekli bellegi sisirebilir ve sunucunun rami
+tukenir
+
