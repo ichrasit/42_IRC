@@ -362,16 +362,23 @@ void    Server::sendMessage(int fd, std::string message){
 
 void    Server::cmdPass(int fd, std::vector<std::string> args){
     if(args.empty()){
-        std::cout << "Argument has to be something!" << std::endl;
+        sendNumeric(fd, "461", "PASS :Not enough parameters");
+        return;
+    }
+
+    // zaten kayitliysa tekrar pass atmaya gerek yok
+    if(_clients[fd]->isRegistered()){
+        sendNumeric(fd, "462", "You may not reregister");
         return;
     }
     if(args[0] == _password){
         _clients[fd]->setPassSet(true);
-        std::cout << "correct password" << std::endl;
+        std::cout << "FD " << fd << " provided correct password." << std::endl;
+
     }
     else{
-        std::cout << "Wrong Password!"  << std::endl;
-        sendNumeric(fd, "464", "Password incorrect");
+        sendNumeric(fd, "464", "Password Incorrect");
+        std::cout << "FD " << fd << " provided wrong password. Disconnecting." << std::endl;
         clientRemover(fd);
     }
 }
