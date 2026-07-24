@@ -495,7 +495,7 @@ void    Server::cmdJoin(int fd, std::vector<std::string> args){
     sendNumeric(fd, "353", "= " + chanName + " :" + memberList);
     sendNumeric(fd, "366", chanName + " :End of /NAMES list.");
 }
-void    Server::cmdPart(int fd, std::vector<std::string> args){
+void Server::cmdPart(int fd, std::vector<std::string> args){
     if (!_clients[fd]->isRegistered()){
         sendNumeric(fd, "451", "You have not registered");
         return;
@@ -504,13 +504,11 @@ void    Server::cmdPart(int fd, std::vector<std::string> args){
         sendNumeric(fd, "461", "PART :Not enough parameters");
         return;
     }
-
     std::string chanName = args[0];
     if (_channels.find(chanName) == _channels.end()){
         sendNumeric(fd, "403", chanName + " :No such channel");
         return;
     }
-
     if (!_channels[chanName]->isMember(_clients[fd])){
         sendNumeric(fd, "442", chanName + " :You're not on that channel");
         return;
@@ -522,6 +520,13 @@ void    Server::cmdPart(int fd, std::vector<std::string> args){
 
     _channels[chanName]->removeMember(_clients[fd]);
     _channels[chanName]->removeOperator(_clients[fd]);
+
+    // --- FİX: Eğer kanalda üye kalmadıysa belleği temizle ve map'ten sil ---
+    if (_channels[chanName]->getMemberCount() == 0) {
+        delete _channels[chanName];
+        _channels.erase(chanName);
+        std::cout << "Channel " << chanName << " is empty and destroyed." << std::endl;
+    }
 }
 
 void    Server::cmdQuit(int fd, std::vector<std::string> args){
