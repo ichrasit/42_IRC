@@ -119,6 +119,13 @@ void    Server::clientRemover(int fd){
         delete _clients[fd];
         _clients.erase(fd);
     }
+
+    if (it->second->getMemberCount() == 0){
+        delete it->second;
+        std::map<std::string, Channel*>::iterator toErase = it;
+        --it;
+        _channels.erase(toErase);
+    }
     std::cout << "FD " << fd << " left on the server and removed." << std::endl;
 }
 
