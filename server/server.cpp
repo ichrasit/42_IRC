@@ -726,15 +726,18 @@ void    Server::cmdMode(int fd, std::vector<std::string> args){
     Channel* chan = _channels[chanName];
 
     // Sadece mod sorgusu (MODE #kanal)
-    if (args.size() == 1){
+    if(args.size() == 1){
         std::string activeModes = "+";
-        if (chan->isInviteOnly()) activeModes += "i";
-        if (chan->isTopicRestricted()) activeModes += "t";
-        if (!chan->getPassword().empty()) activeModes += "k";
-        if (chan->getUserLimit() > 0) activeModes += "l";
-        
-        sendNumeric(fd, "324", chanName + " " + activeModes);
-        return;
+        std::string modeParams = "";
+
+        if(chan->isInviteOnly()) activeModes += "i";
+        if(chan->isTopicRestricted()) activeModes += "t";
+        if(!chan->getPassword().empty()){
+            activeModes += "k";
+            modeParams += " " + chan->getPassword;
+
+        }
+        if(chan->getUser)
     }
 
     // Mod degisikligi icin operator kontrolu
