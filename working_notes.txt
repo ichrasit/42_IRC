@@ -23,3 +23,27 @@ Client nesnesinin icinde _buffer, _nickname gibi dinamik string alanlari var.  M
 bellek adresini sabit tutmak icin pointerda kullandik
 
 
+Sinyal yonetimi ve temiz kapanis:
+
+karsi taraf baglantiyi kopardiginda OS sunucuya sigpipe sinyalini atar ve varsayilan davranisi programi aninda crash vermektir
+SIGIGN diyerek ben bu sinyali ignore ediyorum ve send sonucnun -1 donmesinden bu hatayi anliyorum. client remover ile 
+ben temizlerim diyorum. ctrl c basildiginda ise signal =true olur ve runner dongusu burer ve closerfds fonksiyonu cagrilarak tum soketler kapatilip delete ile temizlenri
+
+Kayit Akisi:
+
+Her client nesnesinde _isPassSet boolean bayraklari tutar butun bayraklar true oldugunda ve registered olunmamissa welcome
+mesajini gonderir ve kayit tamamlanir.
+
+
+Kick ve Yetki kontrolu:
+
+Atan kisi kanaldami ve op mi? chan-isOperator(client)
+Atilacak kisi gercekten o kanalda mi? chan-isMember(target)
+Kanal gercekten var mi? _channels.find(chanName)
+
+
+it->first ve it->second 
+
+std map client ve ya aynisinin channel olani birer key value konteynerlardir. it->firs mapin keyidir fd numarasi int veya kanal adi string
+it->second mapin valudesu CLient veya Channel nesnesini adresini tutan pointer.
+
