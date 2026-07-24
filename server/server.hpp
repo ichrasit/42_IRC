@@ -67,6 +67,7 @@ class Server {
         void cmdMode(int fd, std::vector<std::string> args);   // MODE
         
         void sendNumeric(int fd, std::string numeric, std::string message);
+        void clearEmptyChannels();
 };
 
 #endif
