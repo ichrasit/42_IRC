@@ -16,6 +16,7 @@
 #include "client.hpp"   // Client sinif tanimi
 #include <cctype>
 #include "channel.hpp"
+#include <cstdlib>
 
 class Server {
     private:
