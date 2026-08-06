@@ -51,6 +51,11 @@ class Client{
         void setUsername(std::string user) { _username = user; }
         std::string getRealname() const { return _realname; }
         void setRealname(std::string real) { _realname = real; }
+
+        // zombi kontrol fonksiyonlari
+        time_t getLastActivity() const { return _lastActivity; }
+        bool isPingSent() const { return _pingSent; }
+        void setPingSent(bool status) { _pingSent = status; }
 };
 
 #endif
