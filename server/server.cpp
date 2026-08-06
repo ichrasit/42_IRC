@@ -362,8 +362,27 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
     }
     if (!message.empty() && message[0] == ':')
         message.erase(0, 1);
-    if(message == "!yardim"){
+    if(message == "!help"){
         help_printer(target, fd);
+    }
+    else if(message == "!ping"){
+        std::string botMsg = ":Helper PRIVMSG " + target + " :PONG! Server works perfectly.\r\n";
+        if(target[0] == '#'){
+            if(_channels.find(target) != _channels.end())
+                _channels[target]->broadcast(botMsg, NULL);
+        }else{
+            sendMessage(fd, botMsg);
+        }
+    }
+    else if(message == "!rules"){
+        std::string botMsg = ":Helper PRIVMSG " + target + " :Rules: 1. Flood/Spam is forbidden, 2. Show some respect!\r\n";
+        if(target[0] == '#'){
+            if(_channels.find(target) != _channels.end())
+                _channels[target]->broadcast(botMsg, NULL);
+
+        }else{
+            sendMessage(fd, botMsg);
+        }
     }
     std::string senderNick = _clients[fd]->getNickname();
     std::string fullMsg = ":" + senderNick + " PRIVMSG " + target + " :" + message;
