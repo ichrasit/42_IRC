@@ -56,6 +56,10 @@ class Client{
         time_t getLastActivity() const { return _lastActivity; }
         bool isPingSent() const { return _pingSent; }
         void setPingSent(bool status) { _pingSent = status; }
+        void updateLastActivity() {
+            _lastActivity = time(NULL);
+            _pingSent = false;
+        }
 };
 
 #endif
