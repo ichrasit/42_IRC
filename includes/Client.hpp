@@ -18,38 +18,36 @@ class Client {
         std::string _realname;
 
     public:
-        Client(int fd) : _fd(fd), _buffer(""), _isNickSet(false), _isUserSet(false), 
-                         _isRegistered(false), _isPassSet(false), 
-                         _nickname(""), _username(""), _realname("") {}
-        ~Client() {}
+        Client(int fd);
+        ~Client();
 
-        int getFd() const { return _fd; }
+        int getFd() const;
 
-        void appendBuffer(std::string str) { _buffer += str; }
-        std::string& getBuffer() { return _buffer; }
-        void clearBuffer() { _buffer.clear(); }
-        void eraseBuffer(size_t pos) { _buffer.erase(0, pos); }
+        void appendBuffer(std::string str);
+        std::string& getBuffer();
+        void clearBuffer();
+        void eraseBuffer(size_t pos);
 
-        bool isNickSet() const { return _isNickSet; }
-        void setNickSet(bool status) { _isNickSet = status; }
+        bool isNickSet() const;
+        void setNickSet(bool status);
         
-        bool isUserSet() const { return _isUserSet; }
-        void setUserSet(bool status) { _isUserSet = status; }
+        bool isUserSet() const;
+        void setUserSet(bool status);
         
-        bool isRegistered() const { return _isRegistered; }
-        void setRegistered(bool status) { _isRegistered = status; }
+        bool isRegistered() const;
+        void setRegistered(bool status);
         
-        bool isPassSet() const { return _isPassSet; }
-        void setPassSet(bool status) { _isPassSet = status; }
+        bool isPassSet() const;
+        void setPassSet(bool status);
 
-        std::string getNickname() const { return _nickname.empty() ? "*" : _nickname; }
-        void setNickname(std::string nick) { _nickname = nick; }
+        std::string getNickname() const;
+        void setNickname(std::string nick);
         
-        std::string getUsername() const { return _username; }
-        void setUsername(std::string user) { _username = user; }
+        std::string getUsername() const;
+        void setUsername(std::string user);
         
-        std::string getRealname() const { return _realname; }
-        void setRealname(std::string real) { _realname = real; }
+        std::string getRealname() const;
+        void setRealname(std::string real);
 };
 
 #endif
