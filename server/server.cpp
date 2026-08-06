@@ -354,43 +354,28 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
         sendNumeric(fd, "412", "No text to send");
         return;
     }
+    
     std::string target = args[0];
     std::string message = "";
+    
     for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) message += " ";
         message += args[i];
     }
+    
     if (!message.empty() && message[0] == ':')
         message.erase(0, 1);
-    if(message == "!help"){
-        help_printer(target, fd);
-    }
-    else if(message == "!ping"){
-        std::string botMsg = ":Helper PRIVMSG " + target + " :PONG! Server works perfectly.\r\n";
-        if(target[0] == '#'){
-            if(_channels.find(target) != _channels.end())
-                _channels[target]->broadcast(botMsg, NULL);
-        }else{
-            sendMessage(fd, botMsg);
-        }
-    }
-    else if(message == "!rules"){
-        std::string botMsg = ":Helper PRIVMSG " + target + " :Rules: 1. Flood/Spam is forbidden, 2. Show some respect!\r\n";
-        if(target[0] == '#'){
-            if(_channels.find(target) != _channels.end())
-                _channels[target]->broadcast(botMsg, NULL);
 
-        }else{
-            sendMessage(fd, botMsg);
-        }
-    }
+    // 1. ÖNCE KULLANICININ MESAJINI KANALA/KİŞİYE YÖNLENDİRİYORUZ
     std::string senderNick = _clients[fd]->getNickname();
     std::string fullMsg = ":" + senderNick + " PRIVMSG " + target + " :" + message;
+    
     if (target[0] == '#') {
         if (_channels.find(target) != _channels.end()) {
             _channels[target]->broadcast(fullMsg, _clients[fd]);
         } else {
             sendNumeric(fd, "401", target + " :No such nick/channel");
+            return; // Kanal yoksa botun da cevap vermesine gerek yok
         }
     } 
     else {
@@ -404,6 +389,30 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
         }
         if (!found) {
             sendNumeric(fd, "401", target + " :No such nick/channel");
+            return; // Hedef kişi yoksa botun cevap vermesine gerek yok
+        }
+    }
+
+    // 2. SONRA BOT KONTROLLERİNİ YAPIYORUZ (Mesaj hedefe ulaştıktan sonra bot cevap verir)
+    if(message == "!help"){
+        help_printer(target, fd);
+    }
+    else if(message == "!ping"){
+        // \r\n kaldırıldı
+        std::string botMsg = ":Helper PRIVMSG " + target + " :PONG! Server works perfectly."; 
+        if(target[0] == '#'){
+            _channels[target]->broadcast(botMsg, NULL);
+        }else{
+            sendMessage(fd, botMsg);
+        }
+    }
+    else if(message == "!rules"){
+        // \r\n kaldırıldı
+        std::string botMsg = ":Helper PRIVMSG " + target + " :Rules: 1. Flood/Spam is forbidden, 2. Show some respect!";
+        if(target[0] == '#'){
+            _channels[target]->broadcast(botMsg, NULL);
+        }else{
+            sendMessage(fd, botMsg);
         }
     }
 }
@@ -750,9 +759,8 @@ void Server::help_printer(std::string target, int fd){
     std::string botName = "Helper";
     std::string helpText = "Commands that you can use : !help, !ping, !rules";
 
-    std::string botMsg = ":" + botName + " PRIVMSG " + target + " :" + helpText + "\r\n";
-
-    // mesaj kişiye mi yoksa kanala mı yazıldı onun kontrolü
+    // \r\n kaldırıldı
+    std::string botMsg = ":" + botName + " PRIVMSG " + target + " :" + helpText;
 
     if(target[0] == '#'){
         if(_channels.find(target) != _channels.end()){
