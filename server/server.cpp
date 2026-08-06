@@ -362,6 +362,9 @@ void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
     }
     if (!message.empty() && message[0] == ':')
         message.erase(0, 1);
+    if(message == "!yardim"){
+        help_printer(target, fd);
+    }
     std::string senderNick = _clients[fd]->getNickname();
     std::string fullMsg = ":" + senderNick + " PRIVMSG " + target + " :" + message;
     if (target[0] == '#') {
@@ -721,5 +724,22 @@ void    Server::clearEmptyChannels(){
         }
         else
             ++it;
+    }
+}
+
+void Server::help_printer(std::string target, int fd){
+    std::string botName = "Helper";
+    std::string helpText = "Commands that you can use : !help, !ping, !rules";
+
+    std::string botMsg = ":" + botName + " PRIVMSG " + target + " :" + helpText + "\r\n";
+
+    // mesaj kişiye mi yoksa kanala mı yazıldı onun kontrolü
+
+    if(target[0] == '#'){
+        if(_channels.find(target) != _channels.end()){
+            _channels[target]->broadcast(botMsg, NULL);
+        }
+    }else{
+        sendMessage(fd, botMsg);
     }
 }
