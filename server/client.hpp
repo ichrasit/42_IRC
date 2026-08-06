@@ -18,6 +18,10 @@ class Client{
         std::string _username;
         std::string _realname;
 
+        // zombi kontrol degiskenleri
+        time_t      _lastActivity;
+        bool        _pingSent;
+
     public:
         Client(int fd) : _fd(fd), _buffer(""), _isNickSet(false), _isUserSet(false), _isRegistered(false), _isPassSet(false), _nickname(""), _username(""), _realname("") {}
         ~Client(){}
