@@ -3,62 +3,56 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
-#include "client.hpp"
+#include "Client.hpp"
 
-class Channel{
+class Channel {
     private:
-        std::string _name;
-        std::string _topic;
-        std::string _password;
-        std::vector<Client*>    _members; // kanaldaki uyeler
-        std::vector<Client*>    _operators; // kanaldaki adminler
-        std::vector<Client*>    _invited; // davet edilenler listesi
-
-        // modlar
-        bool    _inviteOnly;   // +i
-        bool    _topicRestricted; // +t
-        size_t  _userLimit;    // +l (0 ise limit yok)
+        std::string             _name;
+        std::string             _topic;
+        std::string             _password;
+        
+        std::vector<Client*>    _members;
+        std::vector<Client*>    _operators;
+        std::vector<Client*>    _invited;
+        
+        bool                    _inviteOnly;
+        bool                    _topicRestricted;
+        size_t                  _userLimit;
 
     public:
         Channel(std::string name);
         ~Channel();
 
-        // getter setter
         std::string getName() const;
         std::string getTopic() const;
-        void    setTopic(std::string topic);
+        void        setTopic(std::string topic);
+        
         std::string getPassword() const;
-        void    setPassword(std::string password);
+        void        setPassword(std::string password);
 
-        // uye yonetimi
-        void    addMember(Client* client);
-        void    removeMember(Client* client);
-        bool    isMember(Client* client) const;
+        void        addMember(Client* client);
+        void        removeMember(Client* client);
+        bool        isMember(Client* client) const;
 
-        // operator yonetimi
-        void    addOperator(Client* client);
-        void    removeOperator(Client* client);
-        bool    isOperator(Client* client) const;
+        void        addOperator(Client* client);
+        void        removeOperator(Client* client);
+        bool        isOperator(Client* client) const;
 
-        // davet yonetimi
-        void    addInvite(Client* client);
-        bool    isInvited(Client* client) const;
+        void        addInvite(Client* client);
+        bool        isInvited(Client* client) const;
 
-        // mod getter ve setterlari
-        bool    isInviteOnly() const { return _inviteOnly; }
-        void    setInviteOnly(bool status) { _inviteOnly = status; }
+        bool        isInviteOnly() const { return _inviteOnly; }
+        void        setInviteOnly(bool status) { _inviteOnly = status; }
 
-        bool    isTopicRestricted() const { return _topicRestricted; }
-        void    setTopicRestricted(bool status) { _topicRestricted = status; }
+        bool        isTopicRestricted() const { return _topicRestricted; }
+        void        setTopicRestricted(bool status) { _topicRestricted = status; }
 
-        size_t  getUserLimit() const { return _userLimit; }
-        void    setUserLimit(size_t limit) { _userLimit = limit; }
+        size_t      getUserLimit() const { return _userLimit; }
+        void        setUserLimit(size_t limit) { _userLimit = limit; }
 
-        size_t  getMemberCount() const { return _members.size(); }
+        size_t      getMemberCount() const { return _members.size(); }
 
-        // kanala mesaj yayinlama fonksiyonu
-        void    broadcast(std::string message, Client* sender);
+        void        broadcast(std::string message, Client* sender);
 };
 
 #endif
