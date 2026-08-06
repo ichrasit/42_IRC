@@ -49,7 +49,7 @@ void    Server::serverInitializer(){
 void Server::runner(){
     // artik gercek poll yapisi
     while(Server::_signal == false){
-        int poll_count = poll(&_fds[0], _fds.size(), -1);
+        int poll_count = poll(&_fds[0], _fds.size(), 10000);
         if(poll_count == -1 && Server::_signal == false)
             throw std::runtime_error("Poll error!");
         for(size_t i = 0; i < _fds.size(); i++){
