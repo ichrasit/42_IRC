@@ -69,6 +69,7 @@ class Server {
         
         void sendNumeric(int fd, std::string numeric, std::string message);
         void clearEmptyChannels();
+        void help_printer(std::string target, int fd);
 };
 
 #endif
