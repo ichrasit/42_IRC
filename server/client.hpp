@@ -23,7 +23,7 @@ class Client{
         bool        _pingSent;
 
     public:
-        Client(int fd) : _fd(fd), _buffer(""), _isNickSet(false), _isUserSet(false), _isRegistered(false), _isPassSet(false), _nickname(""), _username(""), _realname("") {}
+        Client(int fd) : _fd(fd), _buffer(""), _isNickSet(false), _isUserSet(false), _isRegistered(false), _isPassSet(false), _nickname(""), _username(""), _realname(""), _lastActivity(time(NULL)), _pingSent(false) {}
         ~Client(){}
 
         int getFd() const {return _fd; }
