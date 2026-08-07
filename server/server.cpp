@@ -294,6 +294,7 @@ void    Server::initCommands(){
     _commands["USER"] = &Server::cmdUser;
     _commands["PASS"] = &Server::cmdPass;
     _commands["PING"] = &Server::cmdPing;
+    _commands["PONG"] = &Server::cmdPong;
     _commands["PRIVMSG"] = &Server::cmdPrivmsg;
     _commands["JOIN"] = &Server::cmdJoin;
     _commands["PART"] = &Server::cmdPart;
