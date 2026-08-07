@@ -342,6 +342,12 @@ void    Server::cmdPing(int fd, std::vector<std::string> args){
     std::cout << "Ping received" << std::endl;
 }
 
+void    Server::cmdPong(int fd, std::vector<std::string> args){
+    (void)fd;
+    (void)args;
+    std::cout << "Pong received from FD " << fd << std::endl;
+}
+
 void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
     if (!_clients[fd]->isRegistered()) {
         sendNumeric(fd, "451", "You have not registered");
