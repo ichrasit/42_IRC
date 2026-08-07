@@ -52,6 +52,11 @@ void Server::runner(){
         int poll_count = poll(&_fds[0], _fds.size(), 10000);
         if(poll_count == -1 && Server::_signal == false)
             throw std::runtime_error("Poll error!");
+        
+        // Zombi istemcileri kontrol et
+        time_t now = time(NULL);
+        (void)now;
+
         for(size_t i = 0; i < _fds.size(); i++){
             if(_fds[i].revents & POLLIN){
                 if(_fds[i].fd == _serverFd)
