@@ -55,7 +55,16 @@ void Server::runner(){
         
         // Zombi istemcileri kontrol et
         time_t now = time(NULL);
-        (void)now;
+        for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
+            Client* client = it->second;
+            if(now - client->getLastActivity() > 180){
+                if(!client->isPingSent()){
+                    sendMessage(client->getFd(), "PING :ircserv");
+                    client->setPingSent(true);
+                    std::cout << "Inaktif istemciye PING gonderildi FD: " << client->getFd() << std::endl;
+                }
+            }
+        }
 
         for(size_t i = 0; i < _fds.size(); i++){
             if(_fds[i].revents & POLLIN){
