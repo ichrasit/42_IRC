@@ -56,6 +56,7 @@ class Channel{
         void    setUserLimit(size_t limit) { _userLimit = limit; }
 
         size_t  getMemberCount() const { return _members.size(); }
+        const std::vector<Client*>& getMembers() const;
 
         // kanala mesaj yayinlama fonksiyonu
         void    broadcast(std::string message, Client* sender);
