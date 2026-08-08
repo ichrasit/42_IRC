@@ -73,14 +73,14 @@ void Server::runner(){
         }
 
         for(size_t i = 0; i < _fds.size(); i++){
-            if(_fds[i].revents & POLLERR){
-                // POLLERR durum kontrolü iskeleti
-            }
-            else if(_fds[i].revents & POLLHUP){
-                // POLLHUP durum kontrolü iskeleti
-            }
-            else if(_fds[i].revents & POLLNVAL){
-                // POLLNVAL durum kontrolü iskeleti
+            if(_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)){
+                int currentFd = _fds[i].fd;
+                std::cout << "Soket hatasi algilandi (revents: " << _fds[i].revents << ") FD: " << currentFd << std::endl;
+                clientRemover(currentFd);
+                if(_clients.find(currentFd) == _clients.end()){
+                    if(i > 0)
+                        i--;
+                }
             }
             else if(_fds[i].revents & POLLIN){
                 if(_fds[i].fd == _serverFd)
