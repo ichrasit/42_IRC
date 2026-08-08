@@ -76,6 +76,9 @@ void Server::runner(){
             if(_fds[i].revents & POLLERR){
                 // POLLERR durum kontrolü iskeleti
             }
+            else if(_fds[i].revents & POLLHUP){
+                // POLLHUP durum kontrolü iskeleti
+            }
             else if(_fds[i].revents & POLLIN){
                 if(_fds[i].fd == _serverFd)
                     acceptNewClient();
