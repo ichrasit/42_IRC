@@ -73,7 +73,10 @@ void Server::runner(){
         }
 
         for(size_t i = 0; i < _fds.size(); i++){
-            if(_fds[i].revents & POLLIN){
+            if(_fds[i].revents & POLLERR){
+                // POLLERR durum kontrolü iskeleti
+            }
+            else if(_fds[i].revents & POLLIN){
                 if(_fds[i].fd == _serverFd)
                     acceptNewClient();
                 else{
