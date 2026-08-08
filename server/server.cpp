@@ -55,13 +55,19 @@ void Server::runner(){
         
         // Zombi istemcileri kontrol et
         time_t now = time(NULL);
-        for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it){
+        for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end();){
             Client* client = it->second;
+            int clientFd = it->first;
+            // Map iteratorunu silme ihtimaline karsi onceki artim
+            ++it;
             if(now - client->getLastActivity() > 180){
                 if(!client->isPingSent()){
-                    sendMessage(client->getFd(), "PING :ircserv");
+                    sendMessage(clientFd, "PING :ircserv");
                     client->setPingSent(true);
-                    std::cout << "Inaktif istemciye PING gonderildi FD: " << client->getFd() << std::endl;
+                    std::cout << "Inaktif istemciye PING gonderildi FD: " << clientFd << std::endl;
+                } else if(now - client->getLastActivity() > 360){
+                    std::cout << "Zaman asimi nedeniyle baglanti kesiliyor FD: " << clientFd << std::endl;
+                    clientRemover(clientFd);
                 }
             }
         }
