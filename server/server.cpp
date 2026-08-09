@@ -525,7 +525,11 @@ void    Server::cmdQuit(int fd, std::vector<std::string> args){
 
     for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
         if(it->second->isMember(_clients[fd])){
-            // Kullanicinin oldugu kanallar bulundu
+            const std::vector<Client*>& members = it->second->getMembers();
+            for(size_t j = 0; j < members.size(); ++j){
+                if(members[j] != _clients[fd])
+                    uniqueClients.insert(members[j]);
+            }
         }
     }
     std::cout << "FD " << fd << " sent QUIT command." << std::endl;
