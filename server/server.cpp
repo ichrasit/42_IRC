@@ -1,5 +1,6 @@
 #include "server.hpp"
 #include <sstream>
+#include <set>
 
 Server::Server(int port, std::string password) : _port(port), _password(password), _serverFd(-1){
     initCommands(); // komut haritasi
