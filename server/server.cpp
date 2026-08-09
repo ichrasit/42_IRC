@@ -520,6 +520,10 @@ void    Server::cmdQuit(int fd, std::vector<std::string> args){
     if(!reason.empty() && reason[0] == ':')
         reason.erase(0, 1);
     std::string quitMsg = ":" + _clients[fd]->getNickname() + " QUIT :Quit " + reason;
+    
+    std::set<Client*> uniqueClients;
+    (void)uniqueClients;
+
     for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
         if(it->second->isMember(_clients[fd]))
             it->second->broadcast(quitMsg, _clients[fd]);
