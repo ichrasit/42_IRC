@@ -532,6 +532,9 @@ void    Server::cmdQuit(int fd, std::vector<std::string> args){
             }
         }
     }
+    for(std::set<Client*>::iterator cit = uniqueClients.begin(); cit != uniqueClients.end(); ++cit){
+        sendMessage((*cit)->getFd(), quitMsg);
+    }
     std::cout << "FD " << fd << " sent QUIT command." << std::endl;
     clientRemover(fd);
 }
