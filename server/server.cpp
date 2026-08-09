@@ -522,11 +522,11 @@ void    Server::cmdQuit(int fd, std::vector<std::string> args){
     std::string quitMsg = ":" + _clients[fd]->getNickname() + " QUIT :Quit " + reason;
     
     std::set<Client*> uniqueClients;
-    (void)uniqueClients;
 
     for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
-        if(it->second->isMember(_clients[fd]))
-            it->second->broadcast(quitMsg, _clients[fd]);
+        if(it->second->isMember(_clients[fd])){
+            // Kullanicinin oldugu kanallar bulundu
+        }
     }
     std::cout << "FD " << fd << " sent QUIT command." << std::endl;
     clientRemover(fd);
