@@ -437,7 +437,8 @@ void    Server::cmdJoin(int fd, std::vector<std::string> args){
     std::string key = (args.size() > 1) ? args[1] : "";
     
     if (chanName.empty() || chanName[0] != '#') {
-        // Gecersiz kanal ismi
+        sendNumeric(fd, "403", (chanName.empty() ? "" : chanName) + " :No such channel");
+        return;
     }
     // kanal yoksa yeni olustur
     if (_channels.find(chanName) == _channels.end()) {
