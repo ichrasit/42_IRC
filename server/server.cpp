@@ -578,6 +578,9 @@ void    Server::cmdKick(int fd, std::vector<std::string> args){
     chan->removeMember(targetClient);
     chan->removeOperator(targetClient);
     // KICK sonrasi kanal bos kaldiysa temizleme kontrolu
+    if(chan->getMemberCount() == 0){
+        // Kanal bos kaldi
+    }
 }
 
 void    Server::cmdInvite(int fd, std::vector<std::string> args){
