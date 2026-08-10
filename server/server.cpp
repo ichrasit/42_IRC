@@ -579,7 +579,9 @@ void    Server::cmdKick(int fd, std::vector<std::string> args){
     chan->removeOperator(targetClient);
     // KICK sonrasi kanal bos kaldiysa temizleme kontrolu
     if(chan->getMemberCount() == 0){
-        // Kanal bos kaldi
+        delete chan;
+        _channels.erase(chanName);
+        std::cout << "Kanal " << chanName << " son kullanicinin atilmasiyla bos kaldi ve yok edildi." << std::endl;
     }
 }
 
