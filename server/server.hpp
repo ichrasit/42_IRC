@@ -55,6 +55,7 @@ class Server {
         void initCommands();
         void cmdPass(int fd, std::vector<std::string> args);
         void cmdPing(int fd, std::vector<std::string> args);
+        void cmdPong(int fd, std::vector<std::string> args);
         void cmdPrivmsg(int fd, std::vector<std::string> args);
         void cmdJoin(int fd, std::vector<std::string> args);
         void cmdPart(int fd, std::vector<std::string> args);

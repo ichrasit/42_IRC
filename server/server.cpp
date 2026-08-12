@@ -1,5 +1,6 @@
 #include "server.hpp"
 #include <sstream>
+#include <set>
 
 Server::Server(int port, std::string password) : _port(port), _password(password), _serverFd(-1){
     initCommands(); // komut haritasi
@@ -49,11 +50,40 @@ void    Server::serverInitializer(){
 void Server::runner(){
     // artik gercek poll yapisi
     while(Server::_signal == false){
-        int poll_count = poll(&_fds[0], _fds.size(), -1);
+        int poll_count = poll(&_fds[0], _fds.size(), 10000);
         if(poll_count == -1 && Server::_signal == false)
             throw std::runtime_error("Poll error!");
+        
+        // Zombi istemcileri kontrol et
+        time_t now = time(NULL);
+        for(std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end();){
+            Client* client = it->second;
+            int clientFd = it->first;
+            // Map iteratorunu silme ihtimaline karsi onceki artim
+            ++it;
+            if(now - client->getLastActivity() > 180){
+                if(!client->isPingSent()){
+                    sendMessage(clientFd, "PING :ircserv");
+                    client->setPingSent(true);
+                    std::cout << "Inaktif istemciye PING gonderildi FD: " << clientFd << std::endl;
+                } else if(now - client->getLastActivity() > 360){
+                    std::cout << "Zaman asimi nedeniyle baglanti kesiliyor FD: " << clientFd << std::endl;
+                    clientRemover(clientFd);
+                }
+            }
+        }
+
         for(size_t i = 0; i < _fds.size(); i++){
-            if(_fds[i].revents & POLLIN){
+            if(_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)){
+                int currentFd = _fds[i].fd;
+                std::cout << "Soket hatasi algilandi (revents: " << _fds[i].revents << ") FD: " << currentFd << std::endl;
+                clientRemover(currentFd);
+                if(_clients.find(currentFd) == _clients.end()){
+                    if(i > 0)
+                        i--;
+                }
+            }
+            else if(_fds[i].revents & POLLIN){
                 if(_fds[i].fd == _serverFd)
                     acceptNewClient();
                 else{
@@ -159,6 +189,7 @@ void Server::handleClientData(int fd){
     }
     // gelen veriyi o client'in kisisel bufferina eklememiz gerekiyor
     _clients[fd]->appendBuffer(std::string(buffer, bytes_received));
+    _clients[fd]->updateLastActivity();
     if(_clients[fd]->getBuffer().size() > 2048) {
         std::cerr << "Buffer overflow protection: Closing FD " << fd << std::endl;
         clientRemover(fd);
@@ -293,6 +324,7 @@ void    Server::initCommands(){
     _commands["USER"] = &Server::cmdUser;
     _commands["PASS"] = &Server::cmdPass;
     _commands["PING"] = &Server::cmdPing;
+    _commands["PONG"] = &Server::cmdPong;
     _commands["PRIVMSG"] = &Server::cmdPrivmsg;
     _commands["JOIN"] = &Server::cmdJoin;
     _commands["PART"] = &Server::cmdPart;
@@ -339,6 +371,12 @@ void    Server::cmdPing(int fd, std::vector<std::string> args){
     std::string pong_reply = "PONG " + args[0];
     sendMessage(fd, pong_reply);
     std::cout << "Ping received" << std::endl;
+}
+
+void    Server::cmdPong(int fd, std::vector<std::string> args){
+    (void)fd;
+    (void)args;
+    std::cout << "Pong received from FD " << fd << std::endl;
 }
 
 void    Server::cmdPrivmsg(int fd, std::vector<std::string> args){
@@ -397,8 +435,10 @@ void    Server::cmdJoin(int fd, std::vector<std::string> args){
     }
     std::string chanName = args[0];
     std::string key = (args.size() > 1) ? args[1] : "";
-    if (chanName[0] != '#') {
-        chanName = "#" + chanName;
+    
+    if (chanName.empty() || chanName[0] != '#') {
+        sendNumeric(fd, "403", (chanName.empty() ? "" : chanName) + " :No such channel");
+        return;
     }
     // kanal yoksa yeni olustur
     if (_channels.find(chanName) == _channels.end()) {
@@ -482,9 +522,20 @@ void    Server::cmdQuit(int fd, std::vector<std::string> args){
     if(!reason.empty() && reason[0] == ':')
         reason.erase(0, 1);
     std::string quitMsg = ":" + _clients[fd]->getNickname() + " QUIT :Quit " + reason;
+    
+    std::set<Client*> uniqueClients;
+
     for(std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it){
-        if(it->second->isMember(_clients[fd]))
-            it->second->broadcast(quitMsg, _clients[fd]);
+        if(it->second->isMember(_clients[fd])){
+            const std::vector<Client*>& members = it->second->getMembers();
+            for(size_t j = 0; j < members.size(); ++j){
+                if(members[j] != _clients[fd])
+                    uniqueClients.insert(members[j]);
+            }
+        }
+    }
+    for(std::set<Client*>::iterator cit = uniqueClients.begin(); cit != uniqueClients.end(); ++cit){
+        sendMessage((*cit)->getFd(), quitMsg);
     }
     std::cout << "FD " << fd << " sent QUIT command." << std::endl;
     clientRemover(fd);
@@ -528,6 +579,12 @@ void    Server::cmdKick(int fd, std::vector<std::string> args){
     chan->broadcast(kickMsg, _clients[fd]);
     chan->removeMember(targetClient);
     chan->removeOperator(targetClient);
+    // KICK sonrasi kanal bos kaldiysa temizleme kontrolu
+    if(chan->getMemberCount() == 0){
+        delete chan;
+        _channels.erase(chanName);
+        std::cout << "Kanal " << chanName << " son kullanicinin atilmasiyla bos kaldi ve yok edildi." << std::endl;
+    }
 }
 
 void    Server::cmdInvite(int fd, std::vector<std::string> args){
