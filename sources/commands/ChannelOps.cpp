@@ -267,17 +267,14 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
         sendNumeric(fd, "451", "You have not registered");
         return;
     }
-
     if (args.empty()) {
         sendNumeric(fd, "461", "MODE :Not enough parameters");
         return;
     }
-
     std::string chanName = args[0];
     if (_channels.find(chanName) == _channels.end()) {
         return;
     }
-
     Channel* chan = _channels[chanName];
     if (args.size() == 1) {
         std::string activeModes = "+";
@@ -297,14 +294,13 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
         sendNumeric(fd, "324", chanName + " " + activeModes + modeParams);
         return;
     }
-
     if (!chan->isOperator(_clients[fd])) {
         sendNumeric(fd, "482", chanName + " :You're not channel operator");
         return;
     }
-
     std::string modeStr = args[1];
     bool setFlag = true;
+    size_t paramIndex = 2;
     for (size_t i = 0; i < modeStr.length(); ++i) {
         char c = modeStr[i];
         if (c == '+') setFlag = true;
@@ -314,18 +310,20 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
         } else if (c == 't') {
             chan->setTopicRestricted(setFlag);
         } else if (c == 'k') {
-            if (setFlag && args.size() > 2)
-                chan->setPassword(args[2]);
-            else if (!setFlag)
+            if (setFlag && paramIndex < args.size()) {
+                chan->setPassword(args[paramIndex++]);
+            } else if (!setFlag) {
                 chan->setPassword("");
+            }
         } else if (c == 'l') {
-            if (setFlag && args.size() > 2)
-                chan->setUserLimit(std::atoi(args[2].c_str()));
-            else if (!setFlag)
+            if (setFlag && paramIndex < args.size()) {
+                chan->setUserLimit(std::atoi(args[paramIndex++].c_str()));
+            } else if (!setFlag) {
                 chan->setUserLimit(0);
+            }
         } else if (c == 'o') {
-            if (args.size() > 2) {
-                std::string targetNick = args[2];
+            if (paramIndex < args.size()) {
+                std::string targetNick = args[paramIndex++];
                 for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
                     if (it->second->getNickname() == targetNick) {
                         if (setFlag) chan->addOperator(it->second);
@@ -336,7 +334,6 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
             }
         }
     }
-
     std::string modeMsg = ":" + _clients[fd]->getNickname() + " MODE " + chanName + " " + modeStr;
     sendMessage(fd, modeMsg);
     broadcastToChannel(chan, modeMsg, _clients[fd]);
