@@ -1,6 +1,6 @@
 NAME        = ircserv
 CXX         = c++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++98 -I includes/
+CXXFLAGS    = -Wall -Wextra -Werror -std=c++98 -I includes/ -MMD -MP
 
 SRC_DIR     = sources
 OBJ_DIR     = obj
@@ -11,7 +11,6 @@ SRCS        = $(SRC_DIR)/main.cpp \
               $(SRC_DIR)/core/Parser.cpp \
               $(SRC_DIR)/commands/Authenticate.cpp \
               $(SRC_DIR)/commands/ChannelOps.cpp \
-              $(SRC_DIR)/commands/Connection.cpp \
               $(SRC_DIR)/commands/Messaging.cpp \
               $(SRC_DIR)/commands/Bot.cpp \
               $(SRC_DIR)/models/Client.cpp \
@@ -19,6 +18,7 @@ SRCS        = $(SRC_DIR)/main.cpp \
               $(SRC_DIR)/utils/Utils.cpp
 
 OBJS        = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
+DEPS        = $(OBJS:.o=.d)
 
 RESET       = \033[0m
 GREEN       = \033[1;32m
@@ -46,5 +46,9 @@ fclean: clean
 	@echo "$(RED)  Executable ($(NAME)) removed.$(RESET)"
 
 re: fclean all
+
+# -MMD -MP ile uretilen bagimlilik dosyalari: bir .hpp degistiginde
+# ona bagli tum .o dosyalari yeniden derlenir.
+-include $(DEPS)
 
 .PHONY: all clean fclean re

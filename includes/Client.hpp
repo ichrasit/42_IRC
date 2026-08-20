@@ -7,6 +7,8 @@ class Client {
     private:
         int         _fd;
         std::string _buffer;
+        std::string _writeBuffer;
+        bool        _markedForClose;
         
         bool        _isNickSet;
         bool        _isUserSet;
@@ -27,6 +29,13 @@ class Client {
         std::string& getBuffer();
         void clearBuffer();
         void eraseBuffer(size_t pos);
+
+        void appendWrite(const std::string& str);
+        std::string& getWriteBuffer();
+        bool hasPendingWrite() const;
+
+        bool isMarkedForClose() const;
+        void markForClose();
 
         bool isNickSet() const;
         void setNickSet(bool status);

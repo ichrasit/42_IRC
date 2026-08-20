@@ -7,7 +7,7 @@ void Server::help_printer(std::string target, int fd) {
     
     if (target[0] == '#') {
         if (_channels.find(target) != _channels.end()) {
-            _channels[target]->broadcast(botMsg, NULL);
+            broadcastToChannel(_channels[target], botMsg, NULL);
         }
     } else {
         sendMessage(fd, botMsg);

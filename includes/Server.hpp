@@ -51,6 +51,12 @@ class Server {
         
         void    sendMessage(int fd, std::string message);
         void    sendNumeric(int fd, std::string numeric, std::string message);
+
+        void    setPollOut(int fd, bool enable);
+        void    flushClient(int fd);
+        void    disconnectClient(int fd);
+        void    broadcastToChannel(Channel* channel, std::string message, Client* except);
+
         void    help_printer(std::string target, int fd);
 
         void    cmdPass(int fd, std::vector<std::string> args);

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <csignal>
+#include <cctype>
 
 bool Server::_signal = false;
 
@@ -18,14 +19,30 @@ int main(int ac, char **av) {
     }
 
     std::string portStr = av[1];
+    if (portStr.empty()) {
+        std::cerr << "Error: Port cannot be empty!" << std::endl;
+        return 1;
+    }
+
     for (size_t i = 0; i < portStr.length(); i++) {
-        if (!std::isdigit(portStr[i])) {
+        // isdigit'e negatif char vermek tanimsiz davranistir; unsigned char'a cevir.
+        if (!std::isdigit(static_cast<unsigned char>(portStr[i]))) {
             std::cerr << "Error: Port must contain only numbers!" << std::endl;
             return 1;
         }
     }
 
-    int port = std::atoi(av[1]);
+    // atoi tasmayi bildirmez ("99999" -> htons ile bozulur). strtol + aralik kontrolu.
+    long portValue = std::strtol(portStr.c_str(), NULL, 10);
+    if (portValue < 1 || portValue > 65535) {
+        std::cerr << "Error: Port must be between 1 and 65535!" << std::endl;
+        return 1;
+    }
+    if (portValue < 1024) {
+        std::cerr << "Warning: Ports below 1024 usually require root privileges." << std::endl;
+    }
+
+    int port = static_cast<int>(portValue);
 
     signal(SIGINT, signalHandler);
     signal(SIGQUIT, signalHandler);

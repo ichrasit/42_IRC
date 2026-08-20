@@ -61,6 +61,11 @@ void Server::handleClientData(int fd) {
             return;
 
         _clients[fd]->eraseBuffer(pos + 1);
+
+        // Istemci kapatilmak uzere isaretlendiyse kalan komutlari isleme.
+        if (_clients[fd]->isMarkedForClose())
+            return;
+
         client_buffer = _clients[fd]->getBuffer();
     }
 }
@@ -69,8 +74,12 @@ void Server::clientRemover(int fd) {
     if (_clients.count(fd)) {
         Client* client = _clients[fd];
         for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
-            it->second->removeMember(client);
+            Client* promoted = it->second->removeMember(client);
             it->second->removeOperator(client);
+            if (promoted) {
+                std::string opMsg = ":ircserv MODE " + it->second->getName() + " +o " + promoted->getNickname();
+                broadcastToChannel(it->second, opMsg, NULL);
+            }
         }
     }
 

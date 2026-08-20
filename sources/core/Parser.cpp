@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include <cctype>
 
 void Server::initCommands() {
     _commands["NICK"] = &Server::cmdNick;
@@ -35,7 +36,8 @@ void Server::parseCommand(int fd, std::string command) {
 
     std::string cmd = args[0];
     for (size_t i = 0; i < cmd.length(); ++i) {
-        cmd[i] = std::toupper(cmd[i]);
+        // toupper'a negatif char vermek tanimsiz davranistir (UTF-8 baytlari negatif olabilir).
+        cmd[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(cmd[i])));
     }
 
     if (!args.empty()) {

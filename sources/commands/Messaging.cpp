@@ -32,7 +32,7 @@ void Server::cmdPrivmsg(int fd, std::vector<std::string> args) {
 
     if (target[0] == '#') {
         if (_channels.find(target) != _channels.end()) {
-            _channels[target]->broadcast(fullMsg, _clients[fd]);
+            broadcastToChannel(_channels[target], fullMsg, _clients[fd]);
         } else {
             sendNumeric(fd, "401", target + " :No such nick/channel");
             return;
@@ -57,14 +57,14 @@ void Server::cmdPrivmsg(int fd, std::vector<std::string> args) {
     } else if (message == "!ping") {
         std::string botMsg = ":Helper PRIVMSG " + target + " :PONG! Server works perfectly.";
         if (target[0] == '#') {
-            _channels[target]->broadcast(botMsg, NULL);
+            broadcastToChannel(_channels[target], botMsg, NULL);
         } else {
             sendMessage(fd, botMsg);
         }
     } else if (message == "!rules") {
         std::string botMsg = ":Helper PRIVMSG " + target + " :Rules: 1. Flood/Spam is forbidden, 2. Show some respect!";
         if (target[0] == '#') {
-            _channels[target]->broadcast(botMsg, NULL);
+            broadcastToChannel(_channels[target], botMsg, NULL);
         } else {
             sendMessage(fd, botMsg);
         }
@@ -90,9 +90,9 @@ void Server::cmdQuit(int fd, std::vector<std::string> args) {
     std::string quitMsg = ":" + _clients[fd]->getNickname() + " QUIT :Quit " + reason;
     for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
         if (it->second->isMember(_clients[fd]))
-            it->second->broadcast(quitMsg, _clients[fd]);
+            broadcastToChannel(it->second, quitMsg, _clients[fd]);
     }
 
     std::cout << "FD " << fd << " sent QUIT command." << std::endl;
-    clientRemover(fd);
+    disconnectClient(fd);
 }

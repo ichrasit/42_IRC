@@ -45,7 +45,7 @@ void Server::cmdJoin(int fd, std::vector<std::string> args) {
 
     std::string joinMsg = ":" + _clients[fd]->getNickname() + " JOIN " + chanName;
     sendMessage(fd, joinMsg);
-    _channels[chanName]->broadcast(joinMsg, _clients[fd]);
+    broadcastToChannel(_channels[chanName], joinMsg, _clients[fd]);
 
     Channel* chan = _channels[chanName];
     std::string memberList = "";
@@ -91,9 +91,13 @@ void Server::cmdPart(int fd, std::vector<std::string> args) {
 
     std::string partMsg = ":" + _clients[fd]->getNickname() + " PART " + chanName;
     sendMessage(fd, partMsg);
-    _channels[chanName]->broadcast(partMsg, _clients[fd]);
-    _channels[chanName]->removeMember(_clients[fd]);
-    _channels[chanName]->removeOperator(_clients[fd]);
+    broadcastToChannel(_channels[chanName], partMsg, _clients[fd]);
+
+    Client* promoted = _channels[chanName]->removeMember(_clients[fd]);
+    if (promoted) {
+        std::string opMsg = ":ircserv MODE " + chanName + " +o " + promoted->getNickname();
+        broadcastToChannel(_channels[chanName], opMsg, NULL);
+    }
 
     if (_channels[chanName]->getMemberCount() == 0) {
         delete _channels[chanName];
@@ -142,9 +146,13 @@ void Server::cmdKick(int fd, std::vector<std::string> args) {
 
     std::string kickMsg = ":" + _clients[fd]->getNickname() + " KICK " + chanName + " " + targetNick + " :Kicked by operator";
     sendMessage(fd, kickMsg);
-    chan->broadcast(kickMsg, _clients[fd]);
-    chan->removeMember(targetClient);
-    chan->removeOperator(targetClient);
+    broadcastToChannel(chan, kickMsg, _clients[fd]);
+
+    Client* promoted = chan->removeMember(targetClient);
+    if (promoted) {
+        std::string opMsg = ":ircserv MODE " + chanName + " +o " + promoted->getNickname();
+        broadcastToChannel(chan, opMsg, NULL);
+    }
 }
 
 void Server::cmdInvite(int fd, std::vector<std::string> args) {
@@ -251,7 +259,7 @@ void Server::cmdTopic(int fd, std::vector<std::string> args) {
     }
 
     sendMessage(fd, topicMsg);
-    chan->broadcast(topicMsg, _clients[fd]);
+    broadcastToChannel(chan, topicMsg, _clients[fd]);
 }
 
 void Server::cmdMode(int fd, std::vector<std::string> args) {
@@ -331,5 +339,5 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
 
     std::string modeMsg = ":" + _clients[fd]->getNickname() + " MODE " + chanName + " " + modeStr;
     sendMessage(fd, modeMsg);
-    chan->broadcast(modeMsg, _clients[fd]);
+    broadcastToChannel(chan, modeMsg, _clients[fd]);
 }

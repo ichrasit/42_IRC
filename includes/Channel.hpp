@@ -31,8 +31,12 @@ class Channel {
         void        setPassword(std::string password);
 
         void        addMember(Client* client);
-        void        removeMember(Client* client);
+        // Uyeyi cikarir. Kanal operatorsuz kaldiysa terfi ettirilen yeni
+        // operatoru dondurur, aksi halde NULL. Yayin cagiran tarafin isi.
+        Client*     removeMember(Client* client);
         bool        isMember(Client* client) const;
+
+        const std::vector<Client*>& getMembers() const { return _members; }
 
         void        addOperator(Client* client);
         void        removeOperator(Client* client);
@@ -51,8 +55,6 @@ class Channel {
         void        setUserLimit(size_t limit) { _userLimit = limit; }
 
         size_t      getMemberCount() const { return _members.size(); }
-
-        void        broadcast(std::string message, Client* sender);
 };
 
 #endif

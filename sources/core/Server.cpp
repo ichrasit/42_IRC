@@ -48,11 +48,24 @@ void Server::runner() {
             throw std::runtime_error("Poll error!");
 
         for (size_t i = 0; i < _fds.size(); i++) {
-            if (_fds[i].revents & POLLIN) {
-                if (_fds[i].fd == _serverFd) {
+            int   currentFd = _fds[i].fd;
+            short revents   = _fds[i].revents;
+
+            // Once yazma yolu: bekleyen cikti ancak soket yazilabilir oldugunda
+            // bosaltilir. Boylece hicbir send() poll() disinda calismaz.
+            if ((revents & POLLOUT) && currentFd != _serverFd) {
+                flushClient(currentFd);
+                if (_clients.find(currentFd) == _clients.end()) {
+                    if (i > 0)
+                        i--;
+                    continue;
+                }
+            }
+
+            if (revents & POLLIN) {
+                if (currentFd == _serverFd) {
                     acceptNewClient();
                 } else {
-                    int currentFd = _fds[i].fd;
                     handleClientData(currentFd);
                     if (_clients.find(currentFd) == _clients.end()) {
                         if (i > 0)
@@ -84,9 +97,85 @@ void Server::closerFds() {
     std::cout << "All channels are deleted and memory is freed." << std::endl;
 }
 
+// Mesaj DOGRUDAN gonderilmez; istemcinin cikis tamponuna yazilir ve soket
+// POLLOUT icin isaretlenir. Asil send() yalnizca flushClient() icinde,
+// poll() bize "yazilabilir" dedikten sonra calisir.
 void Server::sendMessage(int fd, std::string message) {
     std::map<int, Client*>::iterator it = _clients.find(fd);
-    if (it == _clients.end()) return;
+    if (it == _clients.end())
+        return;
+
     it->second->appendWrite(message + "\r\n");
     setPollOut(fd, true);
+}
+
+void Server::setPollOut(int fd, bool enable) {
+    for (size_t i = 0; i < _fds.size(); i++) {
+        if (_fds[i].fd == fd) {
+            if (enable)
+                _fds[i].events = static_cast<short>(_fds[i].events | POLLOUT);
+            else
+                _fds[i].events = static_cast<short>(_fds[i].events & ~POLLOUT);
+            return;
+        }
+    }
+}
+
+void Server::flushClient(int fd) {
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it == _clients.end())
+        return;
+
+    Client* client = it->second;
+    std::string& out = client->getWriteBuffer();
+
+    if (out.empty()) {
+        setPollOut(fd, false);
+        if (client->isMarkedForClose())
+            clientRemover(fd);
+        return;
+    }
+
+    ssize_t sent = send(fd, out.c_str(), out.size(), 0);
+    if (sent <= 0) {
+        clientRemover(fd);
+        return;
+    }
+
+    // Kismi yazma: yalnizca gercekten giden bayt kadarini tampondan sil.
+    // Kalan kisim bir sonraki POLLOUT turunda gonderilir.
+    out.erase(0, static_cast<size_t>(sent));
+
+    if (out.empty()) {
+        setPollOut(fd, false);
+        if (client->isMarkedForClose())
+            clientRemover(fd);
+    }
+}
+
+// Kapatilacak istemcinin bekleyen ciktisi varsa (ornegin bir hata numerigi)
+// once o gonderilir; kapatma islemi flushClient() icinde yapilir.
+void Server::disconnectClient(int fd) {
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it == _clients.end())
+        return;
+
+    if (it->second->hasPendingWrite()) {
+        it->second->markForClose();
+        setPollOut(fd, true);
+        return;
+    }
+    clientRemover(fd);
+}
+
+// Channel artik ag katmanini tanimiyor; yayin sunucu uzerinden yapiliyor.
+void Server::broadcastToChannel(Channel* channel, std::string message, Client* except) {
+    if (!channel)
+        return;
+
+    const std::vector<Client*>& members = channel->getMembers();
+    for (size_t i = 0; i < members.size(); ++i) {
+        if (members[i] != except)
+            sendMessage(members[i]->getFd(), message);
+    }
 }

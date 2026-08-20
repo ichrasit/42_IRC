@@ -1,6 +1,7 @@
 #include "Client.hpp"
 
-Client::Client(int fd) : _fd(fd), _buffer(""), _isNickSet(false), _isUserSet(false), 
+Client::Client(int fd) : _fd(fd), _buffer(""), _writeBuffer(""), _markedForClose(false),
+                         _isNickSet(false), _isUserSet(false),
                          _isRegistered(false), _isPassSet(false), 
                          _nickname(""), _username(""), _realname("") {
 }
@@ -26,6 +27,26 @@ void Client::clearBuffer() {
 
 void Client::eraseBuffer(size_t pos) {
     _buffer.erase(0, pos);
+}
+
+void Client::appendWrite(const std::string& str) {
+    _writeBuffer += str;
+}
+
+std::string& Client::getWriteBuffer() {
+    return _writeBuffer;
+}
+
+bool Client::hasPendingWrite() const {
+    return !_writeBuffer.empty();
+}
+
+bool Client::isMarkedForClose() const {
+    return _markedForClose;
+}
+
+void Client::markForClose() {
+    _markedForClose = true;
 }
 
 bool Client::isNickSet() const {

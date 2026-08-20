@@ -1,4 +1,29 @@
 #include "Server.hpp"
+#include <cctype>
+
+// RFC 2812 nick kurali: ilk karakter harf ya da ozel karakter olmali,
+// devami ek olarak rakam ve '-' kabul eder. Azami uzunluk 9.
+// '#', ':', ',' ve bosluk gibi karakterler protokolu bozdugu icin yasak.
+#define NICK_MAX_LEN 9
+
+static bool isValidNick(const std::string& nick) {
+    if (nick.empty() || nick.length() > NICK_MAX_LEN)
+        return false;
+
+    const std::string special = "[]\\`_^{|}";
+
+    if (!std::isalpha(static_cast<unsigned char>(nick[0]))
+        && special.find(nick[0]) == std::string::npos)
+        return false;
+
+    for (size_t i = 1; i < nick.length(); ++i) {
+        if (!std::isalnum(static_cast<unsigned char>(nick[i]))
+            && special.find(nick[i]) == std::string::npos
+            && nick[i] != '-')
+            return false;
+    }
+    return true;
+}
 
 void Server::cmdPass(int fd, std::vector<std::string> args) {
     if (args.empty()) {
@@ -17,7 +42,7 @@ void Server::cmdPass(int fd, std::vector<std::string> args) {
     } else {
         sendNumeric(fd, "464", "Password Incorrect");
         std::cout << "FD " << fd << " provided wrong password. Disconnecting." << std::endl;
-        clientRemover(fd);
+        disconnectClient(fd);
     }
 }
 
@@ -33,6 +58,12 @@ void Server::cmdNick(int fd, std::vector<std::string> args) {
     }
 
     std::string newNick = args[0];
+
+    if (!isValidNick(newNick)) {
+        sendNumeric(fd, "432", newNick + " Erroneous nickname");
+        return;
+    }
+
     for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
         if (it->second->getNickname() == newNick && it->first != fd) {
             sendNumeric(fd, "433", newNick + " Nickname is already in use");
@@ -50,7 +81,7 @@ void Server::cmdNick(int fd, std::vector<std::string> args) {
         sendMessage(fd, nickMsg);
         for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
             if (it->second->isMember(_clients[fd]))
-                it->second->broadcast(nickMsg, _clients[fd]);
+                broadcastToChannel(it->second, nickMsg, _clients[fd]);
         }
     }
 
