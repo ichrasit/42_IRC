@@ -1,13 +1,15 @@
-.vscode
 
-.json
-
-todo.md
-
+obj/
+*.o
+ircserv
 a.out
 
+.vscode/
 .DS_Store
+*.swp
 
-ircserv
 
-rasit
+ex/
+*.txt
+*.md
+!README.md
