@@ -51,8 +51,6 @@ void Server::runner() {
             int   currentFd = _fds[i].fd;
             short revents   = _fds[i].revents;
 
-            // Once yazma yolu: bekleyen cikti ancak soket yazilabilir oldugunda
-            // bosaltilir. Boylece hicbir send() poll() disinda calismaz.
             if ((revents & POLLOUT) && currentFd != _serverFd) {
                 flushClient(currentFd);
                 if (_clients.find(currentFd) == _clients.end()) {
@@ -97,9 +95,6 @@ void Server::closerFds() {
     std::cout << "All channels are deleted and memory is freed." << std::endl;
 }
 
-// Mesaj DOGRUDAN gonderilmez; istemcinin cikis tamponuna yazilir ve soket
-// POLLOUT icin isaretlenir. Asil send() yalnizca flushClient() icinde,
-// poll() bize "yazilabilir" dedikten sonra calisir.
 void Server::sendMessage(int fd, std::string message) {
     std::map<int, Client*>::iterator it = _clients.find(fd);
     if (it == _clients.end())

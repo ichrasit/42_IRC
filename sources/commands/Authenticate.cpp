@@ -1,9 +1,6 @@
 #include "Server.hpp"
 #include <cctype>
 
-// RFC 2812 nick kurali: ilk karakter harf ya da ozel karakter olmali,
-// devami ek olarak rakam ve '-' kabul eder. Azami uzunluk 9.
-// '#', ':', ',' ve bosluk gibi karakterler protokolu bozdugu icin yasak.
 #define NICK_MAX_LEN 9
 
 static bool isValidNick(const std::string& nick) {
