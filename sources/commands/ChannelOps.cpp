@@ -1,5 +1,22 @@
 #include "Server.hpp"
 #include <sstream>
+#include <cstdlib>
+
+// MODE +l icin makul ust sinir. atoi yerine strtol kullanip bu araligin
+// disini reddediyoruz: negatif bir deger size_t'ye yazilirsa devasa bir
+// sayiya donusur ve kanal pratikte sinirsiz olur.
+#define MODE_MAX_LIMIT 100000
+
+// Uygulanan modlari biriktirir. Isaret yalnizca degistiginde yazilir,
+// boylece "+it-k" gibi derli toplu bir yayin olusur.
+static void addApplied(std::string& modes, char& lastSign, bool adding, char mode) {
+    char sign = adding ? '+' : '-';
+    if (sign != lastSign) {
+        modes += sign;
+        lastSign = sign;
+    }
+    modes += mode;
+}
 
 void Server::cmdJoin(int fd, std::vector<std::string> args) {
     if (!_clients[fd]->isRegistered()) {
@@ -274,7 +291,20 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
     }
 
     std::string chanName = args[0];
+
+    // Hedef bir kanal degilse bu bir kullanici modu istegidir. Istemciler
+    // baglanirken "MODE <kendi nicki> +i" gonderebiliyor; buna "No such
+    // channel" demek yanlis olur.
+    if (chanName.empty() || (chanName[0] != '#' && chanName[0] != '&')) {
+        if (chanName == _clients[fd]->getNickname())
+            sendNumeric(fd, "221", "+");
+        else
+            sendNumeric(fd, "502", "Cannot change mode for other users");
+        return;
+    }
+
     if (_channels.find(chanName) == _channels.end()) {
+        sendNumeric(fd, "403", chanName + " :No such channel");
         return;
     }
 
@@ -303,41 +333,125 @@ void Server::cmdMode(int fd, std::vector<std::string> args) {
         return;
     }
 
-    std::string modeStr = args[1];
-    bool setFlag = true;
+    std::string modeStr  = args[1];
+    size_t      argIndex = 2;        // parametre gerektiren her mod bunu ilerletir
+    bool        adding   = true;
+
+    std::string appliedModes;        // yalnizca GERCEKTEN uygulanan modlar
+    std::string appliedParams;
+    char        lastSign = 0;
+
     for (size_t i = 0; i < modeStr.length(); ++i) {
         char c = modeStr[i];
-        if (c == '+') setFlag = true;
-        else if (c == '-') setFlag = false;
-        else if (c == 'i') {
-            chan->setInviteOnly(setFlag);
-        } else if (c == 't') {
-            chan->setTopicRestricted(setFlag);
-        } else if (c == 'k') {
-            if (setFlag && args.size() > 2)
-                chan->setPassword(args[2]);
-            else if (!setFlag)
-                chan->setPassword("");
-        } else if (c == 'l') {
-            if (setFlag && args.size() > 2)
-                chan->setUserLimit(std::atoi(args[2].c_str()));
-            else if (!setFlag)
-                chan->setUserLimit(0);
-        } else if (c == 'o') {
-            if (args.size() > 2) {
-                std::string targetNick = args[2];
+
+        if (c == '+' || c == '-') {
+            adding = (c == '+');
+            continue;
+        }
+
+        switch (c) {
+            case 'i':
+                chan->setInviteOnly(adding);
+                addApplied(appliedModes, lastSign, adding, 'i');
+                break;
+
+            case 't':
+                chan->setTopicRestricted(adding);
+                addApplied(appliedModes, lastSign, adding, 't');
+                break;
+
+            case 'k':
+                if (!adding) {
+                    chan->setPassword("");
+                    addApplied(appliedModes, lastSign, adding, 'k');
+                    break;
+                }
+                if (argIndex >= args.size()) {
+                    sendNumeric(fd, "461", "MODE :Not enough parameters");
+                    break;
+                }
+                chan->setPassword(args[argIndex]);
+                addApplied(appliedModes, lastSign, adding, 'k');
+                appliedParams += " " + args[argIndex];
+                ++argIndex;
+                break;
+
+            case 'l': {
+                if (!adding) {
+                    chan->setUserLimit(0);
+                    addApplied(appliedModes, lastSign, adding, 'l');
+                    break;
+                }
+                if (argIndex >= args.size()) {
+                    sendNumeric(fd, "461", "MODE :Not enough parameters");
+                    break;
+                }
+
+                const char* raw = args[argIndex].c_str();
+                char*       end = NULL;
+                long        limit = std::strtol(raw, &end, 10);
+
+                // Gecersiz parametre tuketilir ama mod UYGULANMAZ.
+                if (end == raw || *end != '\0' || limit <= 0 || limit > MODE_MAX_LIMIT) {
+                    ++argIndex;
+                    break;
+                }
+
+                chan->setUserLimit(static_cast<size_t>(limit));
+                addApplied(appliedModes, lastSign, adding, 'l');
+                appliedParams += " " + args[argIndex];
+                ++argIndex;
+                break;
+            }
+
+            case 'o': {
+                if (argIndex >= args.size()) {
+                    sendNumeric(fd, "461", "MODE :Not enough parameters");
+                    break;
+                }
+
+                std::string targetNick = args[argIndex];
+                ++argIndex;
+
+                Client* target = NULL;
                 for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
                     if (it->second->getNickname() == targetNick) {
-                        if (setFlag) chan->addOperator(it->second);
-                        else chan->removeOperator(it->second);
+                        target = it->second;
                         break;
                     }
                 }
+
+                if (!target) {
+                    sendNumeric(fd, "401", targetNick + " :No such nick/channel");
+                    break;
+                }
+                if (!chan->isMember(target)) {
+                    sendNumeric(fd, "441", targetNick + " " + chanName + " :They aren't on that channel");
+                    break;
+                }
+
+                if (adding)
+                    chan->addOperator(target);
+                else
+                    chan->removeOperator(target);
+
+                addApplied(appliedModes, lastSign, adding, 'o');
+                appliedParams += " " + targetNick;
+                break;
             }
+
+            default:
+                sendNumeric(fd, "472", std::string(1, c) + " :is unknown mode char to me");
+                break;
         }
     }
 
-    std::string modeMsg = ":" + _clients[fd]->getNickname() + " MODE " + chanName + " " + modeStr;
+    // Hicbir mod uygulanmadiysa yayin yapma.
+    if (appliedModes.empty())
+        return;
+
+    std::string modeMsg = ":" + _clients[fd]->getNickname() + " MODE " + chanName
+                        + " " + appliedModes + appliedParams;
     sendMessage(fd, modeMsg);
     broadcastToChannel(chan, modeMsg, _clients[fd]);
 }
