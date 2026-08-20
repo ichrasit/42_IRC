@@ -85,8 +85,8 @@ void Server::closerFds() {
 }
 
 void Server::sendMessage(int fd, std::string message) {
-    message += "\r\n";
-    if (send(fd, message.c_str(), message.size(), 0) == -1) {
-        std::cerr << "Error: Cannot send message to FD " << fd << std::endl;
-    }
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it == _clients.end()) return;
+    it->second->appendWrite(message + "\r\n");
+    setPollOut(fd, true);
 }
